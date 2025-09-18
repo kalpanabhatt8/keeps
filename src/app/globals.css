@@ -1,0 +1,78 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-pixel: var(--font-minecraftia), sans-serif;
+  --font-sans: var(--font-epilogue), sans-serif;
+  --font-serif: var(--font-epunda-slab), serif;
+}
+
+.pixel-font {
+  font-family: var(--font-minecraftia), sans-serif;
+}
+
+.slab-font {
+  font-family: var(--font-epunda-slab), serif;
+}
+
+@layer base {
+  body {
+    background-color: #f7f7ff !important;
+    background-image: linear-gradient(
+        rgba(247, 248, 255, 0.8),
+        rgba(247, 247, 255, 0.8)
+      ),
+      /* url("https://www.transparenttextures.com/patterns/random-grey-variations.png"); */
+        url("https://www.transparenttextures.com/patterns/batthern.png") !important;
+    background-repeat: repeat !important;
+    /* or no-repeat */
+  }
+}
+
+body{
+  font-family: var(--font-epilogue), serif !important ;
+
+}
+
+.keeps-button {
+  background-color: #97A2FF;
+  padding: 0.65rem 2rem;
+  font-size: 1.15rem;
+  cursor: pointer;
+  border-radius: 0rem;
+  border: 2px solid black;
+}
+
+.keeps-button:hover {
+  cursor: url("/public/Images/pointinghand.svg") 12 12, pointer;
+}
+
+.cl-formButtonPrimary {
+  cursor: pointer;
+  background-color: #6370e3;
+  border: none !important;
+  font-family: var(--font-epilogue), sans-serif !important;
+}
+
+.cl-internal-1k7jtru{
+background: repeating-linear-gradient(-45deg, color-mix(in srgb, transparent, #97A2FF 7%), color-mix(in srgb, transparent, #97A2FF 7%) 6px, color-mix(in srgb, transparent, #97A2FF 11%) 6px, color-mix(in srgb, transparent, #97A2FF 11%) 12px) !important
+}
+/* .cl-formButtonPrimary:hover,
+.cl-formButtonPrimary:focus,
+.cl-formButtonPrimary:active {
+  background-color: #6575eecc;
+} */
+
+.cl-internal-fcx671{
+  color: #97A2FF;
+  /* color: var(--clerk-color-muted-foreground, color-mix(in srgb, transparent, var(--clerk-color-foreground, #212126) 65%)); */
+
+}
+
+.cl-cardBox, .cl-cardBox div{
+  font-family: var(--font-epilogue), sans-serif !important;
+
+}
