@@ -5,13 +5,17 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-pixel: var(--font-minecraftia), sans-serif;
+  --font-body: var(--font-lato), sans-serif;
   --font-logo: var(--font-plaster), sans-serif;
   --font-logo-word: var(--font-Poppins), sans-serif;
+  --font-logo-serif: var(--font-serif), sans-serif;
   --font-heading: var(--font-bricolage), sans-serif;
   --font-sans: var(--font-manrope), sans-serif;
   --font-accent: var(--font-patrik-hand), cursive;
   --font-second-accent: var(--font-caveat), cursive;
   --font-alt: var(--font-space-grotesk), sans-serif;
+  --font-race:var(--font-caress);
+  --font-jewel:var(--font-vensfolk)
 }
 
 @layer base {
@@ -25,7 +29,7 @@
       ),
       /* url("https://www.transparenttextures.com/patterns/batthern.png") !important; */
         /* url("https://www.transparenttextures.com/patterns/grid-me.png") !important; */
-        url("https://www.transparenttextures.com/patterns/worn-dots.png");
+        url("https://www.transparenttextures.com/patterns/worn-dots.png") !important;
     /* url("https://www.transparenttextures.com/patterns/asfalt-dark.png"); */
     /* url("https://www.transparenttextures.com/patterns/bright-squares.png"); */
     /* url("https://www.transparenttextures.com/patterns/cartographer.png"); */
@@ -38,28 +42,26 @@
     /* url("https://www.transparenttextures.com/patterns/tiny-grid.png"); */
     /* url("https://www.transparenttextures.com/patterns/woven-light.png"); */
 
-    background-repeat: repeat !important;
 
     /* or no-repeat */
     /* url("https://www.transparenttextures.com/patterns/random-grey-variations.png"); */
   }
 }
 
+h1,h2,h3,h4,h5,h6{
+  font-family: var(--font-manrope);
+}
 body {
   font-family: var(--font-manrope), sans-serif !important;
+  /* font-family: var(--font-lato), sans-serif !important; */
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-.heading-font {
-  font-family: var(--font-space-grotesk), sans-serif;
+.logo-font{
+  font-family: var(--font-caress), sans-serif;
+  /* -webkit-text-stroke: 3px !important; */
+  /* letter-spacing: 3px; */
   /* font-family: var(--font-plaster), sans-serif; */
- 
-  margin-bottom: 0px !important;
+
 }
 .grotesk-font{
     font-family: var(--font-space-grotesk), sans-serif;
