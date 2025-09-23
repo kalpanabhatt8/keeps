@@ -11,7 +11,7 @@ export default function Landing() {
             {/* <h1 className=" text-5xl text-left leading-none tracking-[0em] select-none text-black/80 font-black flex gap-2 flex-col">
            <div>   KS{" "}</div> 
             </h1> */}
-            <h1 className="text-6xl text-left font-[500] leading-none select-none logo-font">
+            <h1 className="text-6xl text-left font-[500] leading-none select-none logo-font text-ink-strong">
               <span className="mr-[0.03em]">K</span>EEPS
             </h1>
             {/* <Image
@@ -177,7 +177,7 @@ export default function Landing() {
               /> */}
 
             {/* <h2 className="!mb-0 text-4xl text-black/90 font-bold" >A page for every day. </h2> */}
-            <p className="text-[1.15rem] text-black/60 mt-2 body-font font-light">
+            <p className="text-[1.15rem] text-ink-muted mt-2 body-font font-light">
               Plan, rant, dream, or just collect pretty things.
             </p>
             <div className="flex flex-wrap items-center gap-8 mt-6">
@@ -194,11 +194,11 @@ export default function Landing() {
             </div>
           </section>
         </div>
-        <p className="text-xs text-black/40 mt-4 ">
+        <p className="text-xs text-ink-soft mt-4 ">
           All your vibes stay on this device.{" "}
           <Link
             href="/sign-up"
-            className="underline-offset-2 hover:underline text-black/60 hover:text-black/80 transition-colors"
+            className="underline-offset-2 hover:underline text-ink-muted hover:text-ink transition-colors"
           >
             Make an account
           </Link>{" "}
