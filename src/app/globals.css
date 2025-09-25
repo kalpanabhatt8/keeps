@@ -100,6 +100,10 @@ body {
   /* font-family: var(--font-lato), sans-serif !important; */
 }
 
+body.dashboard-bg{
+background-color:white !important;
+}
+
 .logo-font{
   font-family: var(--font-caress), sans-serif;
   /* -webkit-text-stroke: 3px !important; */
@@ -254,6 +258,7 @@ button:hover {
   align-items: center;
   justify-content: center;
   width: 100%;
+  border-radius: 0.2rem;
   height: 100%;
   min-width: 120px;
   min-height: 170px;
@@ -288,12 +293,14 @@ button:hover {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: start;
   align-items: flex-start;
-  border-radius: 0.2rem;
+  /* border-radius: 0.2rem; */
   overflow: hidden;
-  padding-left: 1rem;
-  padding-top: 1rem;
+  padding-left: 0.75rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  padding-right: 0.45rem;
   /* box-shadow: 0 18px 32px -22px rgba(39, 29, 64, 0.28); */
   transition: transform 160ms ease, box-shadow 200ms ease;
   background-color: #f6f5ff;
@@ -314,10 +321,10 @@ button:hover {
   mix-blend-mode: soft-light;
 }
 
-.book-cover:hover {
+/* .book-cover:hover {
   transform: translateY(-4px);
   box-shadow: 0 24px 42px -24px rgba(39, 29, 64, 0.35);
-}
+} */
 
 .book-cover .cover-image {
   position: absolute;
@@ -387,19 +394,26 @@ button:hover {
 .book-cover__title {
   font-family: var(--font-manrope), sans-serif;
   font-weight: 600;
-  color: var(--color-ink-strong);
+  color: #525252;
   margin: 0;
   text-align: left;
   line-height: 1.15;
-  font-size: 1rem;
+  font-size: 0.8rem;
 }
 
 .book-cover__subtitle {
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  color: #635c7b;
+  margin-top: 0.1rem;
+  font-size: 0.6rem;
+  color:var(--color-ink-soft);
   letter-spacing: 0.04em;
+  text-align: left;
+  max-width: 6rem;
+
+  white-space: nowrap;        /* 🚀 keep text on one line */
+  overflow: hidden;           /* 🚀 hide overflow */
+  text-overflow: ellipsis;    /* 🚀 show … */
 }
+
 
 .book-cover__tag {
   margin-top: auto;
@@ -438,10 +452,44 @@ button:hover {
 
 
 .trapezoid-bar {
-  width: 100%;
-  height: 3px;
-  background: #d8dee9; /* same bluish shade */
+  width: 102%;
+  height: 6px;
+  background: #f7f7f7;
+  clip-path: polygon(0% 3%, 98% 0, 96% 100%, 4% 100%);
+  border-bottom: 1px solid #efefef;
+/* border-radius: 0.2rem; */
 
-  /* create the angled sides */
-  clip-path: polygon(0% 3%, 98% 0,96% 100%, 4% 100%)
+}
+
+.book-shadow-div{
+  box-shadow: 2px 6px 10px rgba(43, 43, 43, 0.09);
+/* border-radius: 0.2rem; */
+
+}
+
+.book-shadow-div {
+  transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+}
+
+.book-shadow-div {
+  transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+}
+
+.book-shadow-div {
+  transform: perspective(900px) rotateX(0deg) rotateY(0deg);
+  transition: transform 240ms ease, box-shadow 240ms ease;
+}
+
+.group:hover .book-shadow-div {
+  transform: perspective(900px) rotateX(6deg) rotateY(-4deg) translateY(-6px);
+  box-shadow: 10px 28px 36px rgba(47,36,86,0.2);
+}
+
+.group:hover {
+  transform: perspective(900px) rotateX(6deg) rotateY(-4deg) translateY(-6px);
+  box-shadow: 0px 0px 0px rgba(47,36,86,0.2);
+}
+
+div.recent-group{
+  background-color: transparent !important;
 }
