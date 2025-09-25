@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import { neutralBookTemplates } from "@/data/book-templates";
@@ -69,18 +69,53 @@ const Dashboard = () => {
     router.push(`/dashboard/books/${templateId}`);
   };
 
+  const carouselPreviewCount = 6;
+
+  const { previewTemplates, remainingTemplates } = useMemo(() => {
+    return {
+      previewTemplates: neutralBookTemplates.slice(0, carouselPreviewCount),
+      remainingTemplates: neutralBookTemplates.slice(carouselPreviewCount),
+    };
+  }, []);
+
+  const hasRemainingTemplates = remainingTemplates.length > 0;
+
+  const carouselTemplates = showAllTemplates ? neutralBookTemplates : previewTemplates;
+
+  useEffect(() => {
+    if (recentBooks.length === 0 && hasRemainingTemplates) {
+      setShowAllTemplates(true);
+    }
+  }, [recentBooks.length, hasRemainingTemplates, setShowAllTemplates]);
+
   return (
     <main className="min-h-screen w-full pb-24 bg-[#c2c1d3]">
       <section className="mx-auto w-full max-w-6xl px-6 pt-16 md:px-10">
         <section className="flex flex-col gap-16">
           <div className="flex flex-col gap-6 text-ink">
-            <div className="flex flex-col gap-1">
-              <span className="text-[0.6rem] uppercase tracking-[0.3em] text-ink-soft">
-                Starter Library
-              </span>
-              <p className="text-sm text-ink-muted">
-                Scroll through the launch set or open the full gallery to pick your vibe.
-              </p>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[0.6rem] uppercase tracking-[0.3em] text-ink-soft">
+                    Starter Library
+                  </span>
+                  <p className="text-sm text-ink-muted">
+                    Scroll through the launch set or open the full gallery to pick your vibe.
+                  </p>
+                </div>
+
+                {hasRemainingTemplates ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTemplates((prev) => !prev)}
+                    className="starter-actions__button"
+                  >
+                    {showAllTemplates
+                      ? "Hide template gallery"
+                      : `Show ${remainingTemplates.length} more templates`}
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             <div className="starter-carousel">
@@ -100,7 +135,7 @@ const Dashboard = () => {
                   <span className="starter-card__label">Blank</span>
                 </button>
 
-                {neutralBookTemplates.map((book) => (
+                {carouselTemplates.map((book) => (
                   <button
                     key={book.id}
                     type="button"
@@ -123,19 +158,9 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="starter-actions">
-              <button
-                type="button"
-                onClick={() => setShowAllTemplates((prev) => !prev)}
-                className="starter-actions__button"
-              >
-                {showAllTemplates ? "Hide template gallery" : "Show all templates"}
-              </button>
-            </div>
-
-            {showAllTemplates && (
+            {showAllTemplates && hasRemainingTemplates && (
               <div className="starter-grid">
-                {neutralBookTemplates.map((book) => (
+                {remainingTemplates.map((book) => (
                   <button
                     key={`${book.id}-grid`}
                     type="button"
