@@ -1,91 +1,179 @@
-import React from "react";
-import { FolderIllustration, type FolderVariant } from "@/components/folder-illustration";
+"use client";
 
-const starterFolders = [
-  {
-    id: "neutral",
-    title: "Neutral Haven",
-    description: "Glassmorphism, muted tones, clean grids.",
-    variant: "neutral" as FolderVariant,
-  },
-  {
-    id: "kawaii",
-    title: "Kawaii Corner",
-    description: "Pastel pops, bubbly fonts, cute sticker sets.",
-    variant: "kawaii" as FolderVariant,
-  },
-  {
-    id: "retro",
-    title: "Retro Archive",
-    description: "Warm grain, cassette details, vintage palettes.",
-    variant: "retro" as FolderVariant,
-  },
-];
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { BookCover } from "@/components/book-cover";
+import { neutralBookTemplates } from "@/data/book-templates";
+
+type RecentBook = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  coverImage?: string | null;
+  background: string;
+  variant: "solid" | "grid" | "abstract" | "strap" | "gradient";
+  updatedAt: number;
+};
 
 const Dashboard = () => {
+  const router = useRouter();
+  const [recentBooks, setRecentBooks] = useState<RecentBook[]>([]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const loadRecents = () => {
+      try {
+        const raw = localStorage.getItem("keeps-recents");
+        const parsed = raw ? (JSON.parse(raw) as RecentBook[]) : [];
+        setRecentBooks(parsed);
+      } catch (error) {
+        console.error("Failed to read recents", error);
+      }
+    };
+
+    loadRecents();
+    window.addEventListener("storage", loadRecents);
+    return () => window.removeEventListener("storage", loadRecents);
+  }, []);
+
+  const formatRelativeTime = (timestamp: number) => {
+    const diff = Date.now() - timestamp;
+    const minute = 60_000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < minute) return "Just now";
+    if (diff < hour) {
+      const mins = Math.round(diff / minute);
+      return `${mins} min${mins === 1 ? "" : "s"} ago`;
+    }
+    if (diff < day) {
+      const hours = Math.round(diff / hour);
+      return `${hours} hr${hours === 1 ? "" : "s"} ago`;
+    }
+    const days = Math.round(diff / day);
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  };
+
+  const handleCreateNewBook = () => {
+    router.push("/dashboard/books/blank");
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    router.push(`/dashboard/books/${templateId}`);
+  };
+
   return (
     <main className="min-h-screen w-full pb-24">
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pt-16 md:px-10 lg:pt-24">
-        <header className="flex flex-col gap-3 text-ink">
-          <span className="text-xs uppercase tracking-[0.28em] text-ink-soft">
-            Your Keeps Library
-          </span>
-          <h1 className="heading-font text-4xl font-black tracking-[0.06em] text-ink-strong md:text-5xl">
-            Pick a Folder to Dive In
-          </h1>
-          <p className="body-font max-w-xl text-sm text-ink md:text-base">
-            Start with a mood-ready template or craft a fresh folder. Everything
-            saves on this device and carries its own books and pages.
-          </p>
-        </header>
-
-        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-          <button className="group relative flex h-72 flex-col items-center justify-between gap-4 overflow-hidden rounded-3xl border border-dashed border-border-subtle bg-surface-raised px-6 py-6 text-left shadow-[0_18px_40px_-28px_rgba(39,29,64,0.45)] backdrop-blur-sm transition-all hover:-translate-y-1 hover:rotate-[1.5deg] hover:border-border-emphasis hover:shadow-[0_24px_46px_-26px_rgba(39,29,64,0.55)]">
-            <div className="w-full max-w-[220px]">
-              <FolderIllustration
-                variant="neutral"
-                showInsert={false}
-                showPlus
-                label=""
-                className="w-full"
-              />
-            </div>
-            <div className="flex w-full flex-col gap-1">
-              <div className="text-lg font-semibold tracking-[0.015em] text-ink transition-colors group-hover:text-ink-strong">
-                Add New Folder
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 pt-16 md:px-10">
+        <section className="flex flex-col gap-6">
+          {/* <div className="flex flex-col gap-1">
+            <h2 className="heading-font text-xl font-semibold tracking-[0.04em] text-ink-strong">
+              Neutral Starter Covers
+            </h2>
+            <p className="body-font text-sm text-ink-muted">
+              Begin with the blank notebook or pick a template. You can personalize everything on the next screen.
+            </p>
+          </div> */}
+          <div className="flex flex-col gap-2 text-ink">
+            {/* <span className="text-xs uppercase tracking-[0.28em] text-ink-soft">
+              Your Keeps Library
+            </span> */}
+            <h1 className="heading-font text-xl font-semibold text-ink-strong ">
+              Start with a new book
+            </h1>
+          </div>
+          <div className="flex flex-wrap justify-center gap-10 md:justify-start">
+            <button
+              type="button"
+              onClick={handleCreateNewBook}
+              className="group flex w-full max-w-[120px] flex-col items-center gap-0"
+            >
+              <div className="aspect-[128/186] w-full">
+                <div className="empty-template-card h-full w-full"><div>➕</div></div>
               </div>
+              {/* <Image
+                src="/Images/dashboard/rectangle.svg"
+                alt="Cover stand"
+                className="w-full max-w-[110px] opacity-80"
+                width={110}
+                height={4}
+              /> */}
+              <div className="trapezoid-bar"></div>
+            </button>
+
+            {neutralBookTemplates.map((book) => (
+              <button
+                key={book.id}
+                type="button"
+                onClick={() => handleTemplateSelect(book.id)}
+                className="group flex w-full max-w-[120px] flex-col items-center gap-0"
+              >
+                <div className="aspect-[128/186] w-full">
+                  <BookCover variant={book.variant} title={book.title} className="h-full w-full" />
+                </div>
+                {/* <Image
+                  src="/Images/dashboard/rectangle.svg"
+                  alt="Cover stand"
+                  className="w-full max-w-[110px] transition group-hover:opacity-100"
+                  width={110}
+                  height={4}
+                /> */}
+                <div className="trapezoid-bar"></div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {recentBooks.length > 0 && (
+          <section className="flex flex-col gap-6">
+            <div className="flex flex-col gap-1">
+              <h2 className="heading-font text-xl font-semibold tracking-[0.04em] text-ink-strong">
+                Recent Drafts
+              </h2>
               <p className="body-font text-sm text-ink-muted">
-                Start with a blank space. Customize the theme, covers, and vibes.
+                Drafts auto-save while you work. Jump back in anytime.
               </p>
             </div>
-          </button>
 
-          {starterFolders.map((folder) => (
-            <article
-              key={folder.id}
-              className="group relative flex h-72 flex-col items-center justify-between gap-4 overflow-hidden rounded-3xl border border-border-subtle bg-white/80 px-6 py-6 text-left shadow-[0_20px_44px_-32px_rgba(39,29,64,0.6)] backdrop-blur-sm transition-all hover:-translate-y-1 hover:rotate-[1.5deg] hover:shadow-[0_26px_50px_-28px_rgba(39,29,64,0.65)]"
-            >
-              <div className="pointer-events-none absolute inset-0 -z-10 opacity-70 bg-gradient-to-br from-white/0 via-white/20 to-white/40" />
-
-              <div className="w-full max-w-[220px]">
-                <FolderIllustration variant={folder.variant} />
-              </div>
-              <div className="flex w-full flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <h2 className="heading-font text-2xl font-semibold tracking-[0.05em] text-ink-strong">
-                    {folder.title}
-                  </h2>
-                  <span className="rounded-full border border-border-subtle bg-white/70 px-3 py-1 text-xs uppercase tracking-[0.24em] text-ink-muted">
-                    Template
+            <div className="flex flex-wrap justify-center gap-6 md:justify-start">
+              {recentBooks.map((book) => (
+                <button
+                  key={book.id}
+                  type="button"
+                  onClick={() =>
+                    router.push(`/dashboard/books/${book.id}/canvas`)
+                  }
+                  className="group flex w-full max-w-[120px] flex-col items-center gap-0"
+                >
+                  <div className="aspect-[128/186] w-full">
+                    <BookCover
+                      variant={book.variant}
+                      title={book.title}
+                      subtitle={book.subtitle || undefined}
+                      coverImageUrl={book.coverImage ?? undefined}
+                      className="h-full w-full"
+                      style={{ background: book.background }}
+                    />
+                  </div>
+                  <span className="text-center text-xs uppercase tracking-[0.2em] text-ink-soft">
+                    {formatRelativeTime(book.updatedAt)}
                   </span>
-                </div>
-                <p className="body-font text-sm text-ink">
-                  {folder.description}
-                </p>
-              </div>
-            </article>
-          ))}
-        </div>
+                  {/* <Image
+                    src="/Images/dashboard/rectangle.svg"
+                    alt="Cover stand"
+                    className="w-full max-w-[110px] opacity-80 transition group-hover:opacity-100"
+                    width={110}
+                    height={4}
+                  /> */}
+                  <div className="trapezoid-bar"></div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </section>
     </main>
   );

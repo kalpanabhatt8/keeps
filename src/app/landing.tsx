@@ -1,10 +1,9 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function Landing() {
   return (
-    <section className="h-[100vh]">
+    <section className="h-[100vh] landing-body">
       <section className="flex justify-between flex-col items-center">
         <div className="flex items-center justify-center h-[90vh] flex-col">
           <section className="w-[fit-content] h-[fit-content] container flex justify-center items-center flex-col gap-0">
@@ -177,7 +176,7 @@ export default function Landing() {
               /> */}
 
             {/* <h2 className="!mb-0 text-4xl text-black/90 font-bold" >A page for every day. </h2> */}
-            <p className="text-[1.15rem] text-ink-muted mt-2 body-font font-light">
+            <p className="text-[1.15rem] text-ink-soft mt-2 body-font font-light">
               Plan, rant, dream, or just collect pretty things.
             </p>
             <div className="flex flex-wrap items-center gap-8 mt-6">
@@ -194,11 +193,11 @@ export default function Landing() {
             </div>
           </section>
         </div>
-        <p className="text-xs text-ink-soft mt-4 ">
+        <p className="text-sm text-ink-muted mt-4 accent-font">
           All your vibes stay on this device.{" "}
           <Link
             href="/sign-up"
-            className="underline-offset-2 hover:underline text-ink-muted hover:text-ink transition-colors"
+            className="underline-offset-2 hover:underline text-ink hover:text-ink transition-colors"
           >
             Make an account
           </Link>{" "}
