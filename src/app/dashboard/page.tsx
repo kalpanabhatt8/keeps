@@ -20,6 +20,7 @@ type RecentBook = {
 const Dashboard = () => {
   const router = useRouter();
   const [recentBooks, setRecentBooks] = useState<RecentBook[]>([]);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -70,90 +71,137 @@ const Dashboard = () => {
 
   return (
     <main className="min-h-screen w-full pb-24 bg-[#c2c1d3]">
-      <section className="mx-auto h-[100%] flex w-full max-w-6xl flex-col gap-[4rem] px-6 pt-24 md:px-10 justify-center">
-        <section className="flex flex-col gap-4">
-          {/* <div className="flex flex-col gap-1">
-            <h2 className="heading-font text-xl font-semibold tracking-[0.04em] text-ink-strong">
-              Neutral Starter Covers
-            </h2>
-            <p className="body-font text-sm text-ink-muted">
-              Begin with the blank notebook or pick a template. You can personalize everything on the next screen.
-            </p>
-          </div> */}
-          <div className="flex flex-col gap-1 text-ink">
-            <span className="text-[0.7rem] uppercase tracking-[0.3em] text-ink-soft">
-              Shelf Starters
-            </span>
-          </div>
-          <div className="flex flex-wrap justify-center gap-10 md:justify-start">
-            <button
-              type="button"
-              onClick={handleCreateNewBook}
-              className=" flex w-full max-w-[120px] flex-col items-center gap-0 "
-            >
-              <div className="aspect-[128/186] w-full">
-                <div className="empty-template-card h-full w-full"><div>➕</div></div>
-              </div>
-            </button>
-
-            {neutralBookTemplates.map((book) => (
-              <button
-                key={book.id}
-                type="button"
-                onClick={() => handleTemplateSelect(book.id)}
-                className="group flex w-full max-w-[120px] flex-col items-center gap-0"
-              >
-                <div className="aspect-[128/186] w-full book-shadow-div">
-                  <BookCover variant={book.variant} title={book.title} className="h-full w-full" />
-                  <div className="trapezoid-bar"></div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {recentBooks.length > 0 && (
-          <section className="flex flex-col gap-4">
+      <section className="mx-auto w-full max-w-6xl px-6 pt-16 md:px-10">
+        <section className="flex flex-col gap-16">
+          <div className="flex flex-col gap-6 text-ink">
             <div className="flex flex-col gap-1">
-              <h2 className="text-[0.7rem] uppercase tracking-[0.3em] text-ink-soft">
-              What you left open
-              </h2>
-              {/* <p className="body-font text-sm text-ink-muted">
-                Drafts auto-save while you work. Jump back in anytime.
-              </p> */}
+              <span className="text-[0.6rem] uppercase tracking-[0.3em] text-ink-soft">
+                Starter Library
+              </span>
+              <p className="text-sm text-ink-muted">
+                Scroll through the launch set or open the full gallery to pick your vibe.
+              </p>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-10 md:justify-start">
-              {recentBooks.map((book) => (
-                <div key={book.id} className="flex flex-col">
-                  <div
-                    onClick={() =>
-                      router.push(`/dashboard/books/${book.id}/canvas`)
-                    }
-                    className="group flex w-full max-w-[120px] flex-col items-center gap-8 mb-3"
+            <div className="starter-carousel">
+              <div className="starter-carousel__glow" aria-hidden />
+              <div className="starter-carousel__track">
+                <button
+                  type="button"
+                  onClick={handleCreateNewBook}
+                  className="starter-card group"
+                  aria-label="Create blank notebook"
+                >
+                  <div className="aspect-[128/186] w-full">
+                    <div className="empty-template-card h-full w-full">
+                      <div>➕</div>
+                    </div>
+                  </div>
+                  <span className="starter-card__label">Blank</span>
+                </button>
+
+                {neutralBookTemplates.map((book) => (
+                  <button
+                    key={book.id}
+                    type="button"
+                    onClick={() => handleTemplateSelect(book.id)}
+                    className="starter-card group"
                   >
                     <div className="aspect-[128/186] w-full book-shadow-div">
                       <BookCover
                         variant={book.variant}
                         title={book.title}
-                        subtitle={book.subtitle || undefined}
+                        subtitle={book.subtitle}
                         coverImageUrl={book.coverImage ?? undefined}
-                        titleColor={book.titleColor ?? undefined}
-                        subtitleColor={book.subtitleColor ?? undefined}
                         className="h-full w-full"
-                        style={{ background: book.background }}
                       />
-                    <div className="trapezoid-bar"></div>
+                      <div className="trapezoid-bar"></div>
+                    </div>
+                    <span className="starter-card__label">{book.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="starter-actions">
+              <button
+                type="button"
+                onClick={() => setShowAllTemplates((prev) => !prev)}
+                className="starter-actions__button"
+              >
+                {showAllTemplates ? "Hide template gallery" : "Show all templates"}
+              </button>
+            </div>
+
+            {showAllTemplates && (
+              <div className="starter-grid">
+                {neutralBookTemplates.map((book) => (
+                  <button
+                    key={`${book.id}-grid`}
+                    type="button"
+                    onClick={() => handleTemplateSelect(book.id)}
+                    className="starter-grid__card group"
+                  >
+                    <div className="aspect-[128/186] w-full book-shadow-div">
+                      <BookCover
+                        variant={book.variant}
+                        title={book.title}
+                        subtitle={book.subtitle}
+                        coverImageUrl={book.coverImage ?? undefined}
+                        className="h-full w-full"
+                      />
+                      <div className="trapezoid-bar"></div>
+                    </div>
+                    <span className="starter-card__label">{book.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {recentBooks.length > 0 && (
+            <section className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-[0.7rem] uppercase tracking-[0.3em] text-ink-soft">
+                  What you left open
+                </h2>
+                {/* <p className="body-font text-sm text-ink-muted">
+                  Drafts auto-save while you work. Jump back in anytime.
+                </p> */}
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-10 md:justify-start">
+                {recentBooks.map((book) => (
+                  <div key={book.id} className="flex flex-col">
+                    <div
+                      onClick={() =>
+                        router.push(`/dashboard/books/${book.id}/canvas`)
+                      }
+                      className="group flex w-full max-w-[120px] flex-col items-center gap-8 mb-3"
+                    >
+                      <div className="aspect-[128/186] w-full book-shadow-div">
+                        <BookCover
+                          variant={book.variant}
+                          title={book.title}
+                          subtitle={book.subtitle || undefined}
+                          coverImageUrl={book.coverImage ?? undefined}
+                          titleColor={book.titleColor ?? undefined}
+                          subtitleColor={book.subtitleColor ?? undefined}
+                          className="h-full w-full"
+                          style={{ background: book.background }}
+                        />
+                        <div className="trapezoid-bar"></div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-ink ml-2">
+                      {formatRelativeTime(book.updatedAt)}
                     </div>
                   </div>
-                  <div className="text-xs text-ink ml-2">
-                    {formatRelativeTime(book.updatedAt)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+                ))}
+              </div>
+            </section>
+          )}
+        </section>
       </section>
     </main>
   );
