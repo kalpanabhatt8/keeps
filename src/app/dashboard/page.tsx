@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import { neutralBookTemplates } from "@/data/book-templates";
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const router = useRouter();
   const [recentBooks, setRecentBooks] = useState<RecentBook[]>([]);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
+  const userToggledTemplates = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -30,6 +31,9 @@ const Dashboard = () => {
         const raw = localStorage.getItem("keeps-recents");
         const parsed = raw ? (JSON.parse(raw) as RecentBook[]) : [];
         setRecentBooks(parsed);
+        if (!userToggledTemplates.current) {
+          setShowAllTemplates(parsed.length === 0);
+        }
       } catch (error) {
         console.error("Failed to read recents", error);
       }
@@ -71,22 +75,17 @@ const Dashboard = () => {
 
   const carouselPreviewCount = 6;
 
-  const { previewTemplates, remainingTemplates } = useMemo(() => {
-    return {
-      previewTemplates: neutralBookTemplates.slice(0, carouselPreviewCount),
-      remainingTemplates: neutralBookTemplates.slice(carouselPreviewCount),
-    };
-  }, []);
+  const remainingTemplates = useMemo(
+    () => neutralBookTemplates.slice(carouselPreviewCount),
+    []
+  );
 
   const hasRemainingTemplates = remainingTemplates.length > 0;
 
-  const carouselTemplates = showAllTemplates ? neutralBookTemplates : previewTemplates;
-
-  useEffect(() => {
-    if (recentBooks.length === 0 && hasRemainingTemplates) {
-      setShowAllTemplates(true);
-    }
-  }, [recentBooks.length, hasRemainingTemplates, setShowAllTemplates]);
+  const handleToggleTemplates = () => {
+    userToggledTemplates.current = true;
+    setShowAllTemplates((prev) => !prev);
+  };
 
   return (
     <main className="min-h-screen w-full pb-24 bg-[#c2c1d3]">
@@ -107,7 +106,7 @@ const Dashboard = () => {
                 {hasRemainingTemplates ? (
                   <button
                     type="button"
-                    onClick={() => setShowAllTemplates((prev) => !prev)}
+                    onClick={handleToggleTemplates}
                     className="starter-actions__button"
                   >
                     {showAllTemplates
@@ -118,14 +117,54 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="starter-carousel">
-              <div className="starter-carousel__glow" aria-hidden />
-              <div className="starter-carousel__track">
+            {!showAllTemplates && (
+              <div className="starter-carousel">
+                <div className="starter-carousel__glow" aria-hidden />
+                <div className="starter-carousel__track">
+                  <button
+                    type="button"
+                    onClick={handleCreateNewBook}
+                    className="starter-card group"
+                    aria-label="Create blank notebook"
+                  >
+                    <div className="aspect-[128/186] w-full">
+                      <div className="empty-template-card h-full w-full">
+                        <div>➕</div>
+                      </div>
+                    </div>
+                    <span className="starter-card__label">Blank</span>
+                  </button>
+
+                  {neutralBookTemplates.map((book) => (
+                    <button
+                      key={book.id}
+                      type="button"
+                      onClick={() => handleTemplateSelect(book.id)}
+                      className="starter-card group"
+                    >
+                      <div className="aspect-[128/186] w-full book-shadow-div">
+                        <BookCover
+                          variant={book.variant}
+                          title={book.title}
+                          subtitle={book.subtitle}
+                          coverImageUrl={book.coverImage ?? undefined}
+                          className="h-full w-full"
+                        />
+                        <div className="trapezoid-bar"></div>
+                      </div>
+                      <span className="starter-card__label">{book.title}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {showAllTemplates && (
+              <div className="starter-grid">
                 <button
                   type="button"
                   onClick={handleCreateNewBook}
-                  className="starter-card group"
-                  aria-label="Create blank notebook"
+                  className="starter-grid__card group"
                 >
                   <div className="aspect-[128/186] w-full">
                     <div className="empty-template-card h-full w-full">
@@ -134,33 +173,7 @@ const Dashboard = () => {
                   </div>
                   <span className="starter-card__label">Blank</span>
                 </button>
-
-                {carouselTemplates.map((book) => (
-                  <button
-                    key={book.id}
-                    type="button"
-                    onClick={() => handleTemplateSelect(book.id)}
-                    className="starter-card group"
-                  >
-                    <div className="aspect-[128/186] w-full book-shadow-div">
-                      <BookCover
-                        variant={book.variant}
-                        title={book.title}
-                        subtitle={book.subtitle}
-                        coverImageUrl={book.coverImage ?? undefined}
-                        className="h-full w-full"
-                      />
-                      <div className="trapezoid-bar"></div>
-                    </div>
-                    <span className="starter-card__label">{book.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {showAllTemplates && hasRemainingTemplates && (
-              <div className="starter-grid">
-                {remainingTemplates.map((book) => (
+                {neutralBookTemplates.map((book) => (
                   <button
                     key={`${book.id}-grid`}
                     type="button"
