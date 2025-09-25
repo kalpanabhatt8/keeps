@@ -70,7 +70,7 @@ const Dashboard = () => {
 
   return (
     <main className="min-h-screen w-full pb-24 bg-[#c2c1d3]">
-      <section className="mx-auto h-[100%] flex w-full max-w-6xl flex-col gap-[4rem] px-6 pt-16 md:px-10">
+      <section className="mx-auto h-[100%] flex w-full max-w-6xl flex-col gap-[4rem] px-6 pt-24 md:px-10 justify-center">
         <section className="flex flex-col gap-4">
           {/* <div className="flex flex-col gap-1">
             <h2 className="heading-font text-xl font-semibold tracking-[0.04em] text-ink-strong">
