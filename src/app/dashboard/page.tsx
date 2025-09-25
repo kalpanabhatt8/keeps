@@ -69,7 +69,7 @@ const Dashboard = () => {
   };
 
   return (
-    <main className="min-h-screen w-full pb-24 dashboard-bg">
+    <main className="min-h-screen w-full pb-24 bg-[#e0e0e0]">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 pt-16 md:px-10">
         <section className="flex flex-col gap-6">
           {/* <div className="flex flex-col gap-1">

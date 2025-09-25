@@ -100,11 +100,6 @@ body {
   /* font-family: var(--font-lato), sans-serif !important; */
 }
 
-body.dashboard-bg {
-  background-color: #ffffff !important;
-  background-image: none !important;
-}
-
 .logo-font{
   font-family: var(--font-caress), sans-serif;
   /* -webkit-text-stroke: 3px !important; */
