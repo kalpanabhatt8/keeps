@@ -493,7 +493,7 @@ div.recent-group{
 
 .starter-carousel {
   position: relative;
-  padding: 0 1.5rem;
+  /* padding: 0 1.5rem; */
 }
 
 .starter-carousel__glow {
@@ -509,7 +509,7 @@ div.recent-group{
   display: flex;
   gap: 1.4rem;
   overflow-x: auto;
-  padding: 1rem 0 1.4rem;
+  padding: 0rem 1.4rem 4rem 0rem;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
@@ -524,6 +524,7 @@ div.recent-group{
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   scroll-snap-align: center;
   transition: transform 200ms ease;
@@ -549,13 +550,13 @@ div.recent-group{
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 0.75rem;
   border-radius: 999px;
   border: 1px solid rgba(153, 138, 214, 0.24);
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(254, 253, 253, 0.851);
   font-size: 0.65rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* text-transform: uppercase; */
   color: var(--color-ink);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
@@ -566,18 +567,34 @@ div.recent-group{
   box-shadow: 0 18px 28px -20px rgba(31, 24, 55, 0.28);
 }
 
+.starter-grid-wrapper {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 320ms ease, opacity 220ms ease;
+}
+
+.starter-grid-wrapper--open {
+  max-height: 2000px;
+  opacity: 1;
+}
+
 .starter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 2rem 1.5rem;
+display: flex;
+flex-direction: row;
+gap: 1.4rem;
+flex-wrap: wrap;
+  justify-items: center;
+  padding: 0rem 1.4rem 4rem 0rem;
 }
 
 .starter-grid__card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  width: 100%;
+  width: 120px;
 }
 
 @media (max-width: 768px) {

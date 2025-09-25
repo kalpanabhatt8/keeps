@@ -91,16 +91,16 @@ const Dashboard = () => {
     <main className="min-h-screen w-full pb-24 bg-[#c2c1d3]">
       <section className="mx-auto w-full max-w-6xl px-6 pt-16 md:px-10">
         <section className="flex flex-col gap-16">
-          <div className="flex flex-col gap-6 text-ink">
+          <div className="flex flex-col gap-4 text-ink">
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="text-[0.6rem] uppercase tracking-[0.3em] text-ink-soft">
+                  <span className="text-[0.7rem] uppercase tracking-[0.3em] text-ink-soft">
                     Starter Library
                   </span>
-                  <p className="text-sm text-ink-muted">
+                  {/* <p className="text-sm text-ink-soft">
                     Scroll through the launch set or open the full gallery to pick your vibe.
-                  </p>
+                  </p> */}
                 </div>
 
                 {hasRemainingTemplates ? (
@@ -110,8 +110,9 @@ const Dashboard = () => {
                     className="starter-actions__button"
                   >
                     {showAllTemplates
-                      ? "Hide template gallery"
-                      : `Show ${remainingTemplates.length} more templates`}
+                      ? "Hide"
+                      : `Show more`}
+                      {/* : `Show ${remainingTemplates.length} more`} */}
                   </button>
                 ) : null}
               </div>
@@ -132,7 +133,7 @@ const Dashboard = () => {
                         <div>➕</div>
                       </div>
                     </div>
-                    <span className="starter-card__label">Blank</span>
+                    {/* <span className="starter-card__label">Blank</span> */}
                   </button>
 
                   {neutralBookTemplates.map((book) => (
@@ -152,7 +153,7 @@ const Dashboard = () => {
                         />
                         <div className="trapezoid-bar"></div>
                       </div>
-                      <span className="starter-card__label">{book.title}</span>
+                      {/* <span className="starter-card__label">{book.title}</span> */}
                     </button>
                   ))}
                 </div>
@@ -171,7 +172,7 @@ const Dashboard = () => {
                       <div>➕</div>
                     </div>
                   </div>
-                  <span className="starter-card__label">Blank</span>
+                  {/* <span className="starter-card__label">Blank</span> */}
                 </button>
                 {neutralBookTemplates.map((book) => (
                   <button
@@ -190,7 +191,7 @@ const Dashboard = () => {
                       />
                       <div className="trapezoid-bar"></div>
                     </div>
-                    <span className="starter-card__label">{book.title}</span>
+                    {/* <span className="starter-card__label">{book.title}</span> */}
                   </button>
                 ))}
               </div>
@@ -231,7 +232,7 @@ const Dashboard = () => {
                         <div className="trapezoid-bar"></div>
                       </div>
                     </div>
-                    <div className="text-xs text-ink ml-2">
+                    <div className="text-xs text-ink-soft ml-2">
                       {formatRelativeTime(book.updatedAt)}
                     </div>
                   </div>

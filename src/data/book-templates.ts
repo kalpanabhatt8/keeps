@@ -30,13 +30,13 @@ const coverImagePaths: string[] = coverImageContext
   .map((path: string) => `/Images/cover-images/${path.replace("./", "")}`);
 
 const templateBlueprints: Array<Pick<BookTemplate, "variant" | "title" | "subtitle">> = [
-  { variant: "solid", title: "Morning Focus", subtitle: "Plan today’s wins" },
+  { variant: "solid", title: "", subtitle: "" },
   { variant: "grid", title: "Class Notes", subtitle: "Lecture cues & to-dos" },
-  { variant: "abstract", title: "Ideas & Mood", subtitle: "Color, doodles, inspo" },
-  { variant: "strap", title: "Project Log", subtitle: "Brain dumps + todos" },
-  { variant: "gradient", title: "Personal Journal", subtitle: "Moments worth saving" },
-  { variant: "solid", title: "Dream Archive", subtitle: "Sketch what you saw" },
-  { variant: "grid", title: "Study Blueprint", subtitle: "Map assignments + labs" },
+  { variant: "abstract", title: "", subtitle: "" },
+  { variant: "strap", title: "", subtitle: "" },
+  { variant: "gradient", title: "", subtitle: "" },
+  { variant: "solid", title: "", subtitle: "" },
+  { variant: "grid", title: "", subtitle: "" },
   { variant: "abstract", title: "Mood Collage", subtitle: "Textures, colors, feelings" },
   { variant: "strap", title: "Habit Rings", subtitle: "Track daily loops" },
   { variant: "gradient", title: "Self-Care Sync", subtitle: "Body, mind, spirit" },
