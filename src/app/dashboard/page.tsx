@@ -69,9 +69,9 @@ const Dashboard = () => {
   };
 
   return (
-    <main className="min-h-screen w-full pb-24 bg-[#e0e0e0]">
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 pt-16 md:px-10">
-        <section className="flex flex-col gap-6">
+    <main className="min-h-screen w-full pb-24 bg-[#c2c1d3]">
+      <section className="mx-auto h-[100%] flex w-full max-w-6xl flex-col gap-[4rem] px-6 pt-16 md:px-10">
+        <section className="flex flex-col gap-4">
           {/* <div className="flex flex-col gap-1">
             <h2 className="heading-font text-xl font-semibold tracking-[0.04em] text-ink-strong">
               Neutral Starter Covers
@@ -80,19 +80,19 @@ const Dashboard = () => {
               Begin with the blank notebook or pick a template. You can personalize everything on the next screen.
             </p>
           </div> */}
-          <div className="flex flex-col gap-2 text-ink">
+          <div className="flex flex-col gap-4 text-ink">
             {/* <span className="text-xs uppercase tracking-[0.28em] text-ink-soft">
               Your Keeps Library
             </span> */}
-            <h1 className="heading-font text-xl font-semibold text-ink-strong ">
-              Start with a new book
+            <h1 className="heading-font text-sm tracking-[0.2rem] uppercase text-ink-soft">
+            Start Something
             </h1>
           </div>
           <div className="flex flex-wrap justify-center gap-10 md:justify-start">
             <button
               type="button"
               onClick={handleCreateNewBook}
-              className="group flex w-full max-w-[120px] flex-col items-center gap-0 "
+              className=" flex w-full max-w-[120px] flex-col items-center gap-0 "
             >
               <div className="aspect-[128/186] w-full">
                 <div className="empty-template-card h-full w-full"><div>➕</div></div>
@@ -116,14 +116,14 @@ const Dashboard = () => {
         </section>
 
         {recentBooks.length > 0 && (
-          <section className="flex flex-col gap-6">
+          <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <h2 className="heading-font text-xl font-semibold text-ink-strong">
-                Recent Drafts
+              <h2 className="heading-font text-sm tracking-[0.2rem] uppercase text-ink-disabled">
+              What you left open
               </h2>
-              <p className="body-font text-sm text-ink-muted">
+              {/* <p className="body-font text-sm text-ink-muted">
                 Drafts auto-save while you work. Jump back in anytime.
-              </p>
+              </p> */}
             </div>
 
             <div className="flex flex-wrap justify-center gap-10 md:justify-start">
@@ -150,7 +150,7 @@ const Dashboard = () => {
                     <div className="trapezoid-bar"></div>
                     </div>
                   </div>
-                  <div className="text-xs text-ink-muted ml-2">
+                  <div className="text-xs text-ink ml-2">
                     {formatRelativeTime(book.updatedAt)}
                   </div>
                 </div>

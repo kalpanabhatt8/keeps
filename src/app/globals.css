@@ -13,7 +13,8 @@
   /* text color  */
   --color-ink: #50456E;
   --color-ink-strong: #3D3D3D;
-  --color-ink-soft: #737373;
+  --color-ink-soft: #636363;
+  /* --color-ink-soft: #737373; */
   --color-ink-muted: #b0b0b0;
   --color-ink-disabled: #b0b0b0;
   --color-border-subtle: #D4CEED;
