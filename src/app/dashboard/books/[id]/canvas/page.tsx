@@ -20,6 +20,8 @@ type Draft = {
   coverImage?: string | null;
   background: string;
   variant: "solid" | "grid" | "abstract" | "strap" | "gradient";
+  titleColor?: string | null;
+  subtitleColor?: string | null;
   updatedAt: number;
 };
 
@@ -41,6 +43,8 @@ const CanvasPage = () => {
       coverImage: null,
       background: blankDefaults.background,
       variant: template?.variant ?? blankDefaults.variant,
+      titleColor: null,
+      subtitleColor: null,
       updatedAt: Date.now(),
     };
   }, [bookId, template]);
@@ -121,6 +125,8 @@ const CanvasPage = () => {
               title={draft.title}
               subtitle={draft.subtitle || undefined}
               coverImageUrl={draft.coverImage ?? undefined}
+              titleColor={draft.titleColor ?? undefined}
+              subtitleColor={draft.subtitleColor ?? undefined}
               className="w-[150px]"
               style={{ background: draft.background }}
             />

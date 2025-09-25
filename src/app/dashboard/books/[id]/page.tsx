@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { useParams, useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
@@ -42,6 +42,34 @@ const galleryOptions = [
   },
 ];
 
+type DraftPayload = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  coverImage: string | null;
+  background: string;
+  variant: BookCoverVariant;
+  titleColor?: string | null;
+  subtitleColor?: string | null;
+  updatedAt: number;
+};
+
+const titleColorOptions = [
+  { id: "ink-strong", label: "Deep Ink", value: "#3D3D3D" },
+  { id: "plum", label: "Soft Plum", value: "#50456E" },
+  { id: "lavender", label: "Lavender", value: "#6F5DD2" },
+  { id: "fog", label: "Fog", value: "#7D7A99" },
+  { id: "charcoal", label: "Charcoal", value: "#2E2A3F" },
+];
+
+const subtitleColorOptions = [
+  { id: "ink-soft", label: "Muted Ink", value: "#5E5A6F" },
+  { id: "dust", label: "Dust", value: "#6F6A80" },
+  { id: "mauve", label: "Mauve", value: "#8A7FB6" },
+  { id: "cool-grey", label: "Cool Grey", value: "#8F8F99" },
+  { id: "warm-grey", label: "Warm Grey", value: "#A09993" },
+];
+
 const BookBuilderPage = () => {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -59,6 +87,42 @@ const BookBuilderPage = () => {
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [background, setBackground] = useState<string>(backgroundOptions[0].value);
   const [customBackground, setCustomBackground] = useState<string>("");
+  const [titleColor, setTitleColor] = useState<string>("");
+  const [subtitleColor, setSubtitleColor] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const draftsRaw = localStorage.getItem("keeps-drafts");
+      if (!draftsRaw) return;
+
+      const drafts = JSON.parse(draftsRaw) as Record<string, DraftPayload>;
+      const existing = drafts[templateId];
+      if (!existing) return;
+
+      if (existing.title) setTitle(existing.title);
+      if (typeof existing.subtitle === "string") setSubtitle(existing.subtitle);
+      if (existing.coverImage) setCoverImage(existing.coverImage);
+
+      if (existing.background) {
+        const matchesPreset = backgroundOptions.some(
+          (option) => option.value === existing.background
+        );
+        if (matchesPreset) {
+          setBackground(existing.background);
+          setCustomBackground("");
+        } else {
+          setCustomBackground(existing.background);
+        }
+      }
+
+      if (existing.titleColor) setTitleColor(existing.titleColor);
+      if (existing.subtitleColor) setSubtitleColor(existing.subtitleColor);
+    } catch (error) {
+      console.error("Failed to load draft configuration", error);
+    }
+  }, [templateId]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -80,16 +144,6 @@ const BookBuilderPage = () => {
 
   const handleNext = () => {
     try {
-      type DraftPayload = {
-        id: string;
-        title: string;
-        subtitle?: string;
-        coverImage: string | null;
-        background: string;
-        variant: BookCoverVariant;
-        updatedAt: number;
-      };
-
       const draftsRaw = localStorage.getItem("keeps-drafts");
       const drafts = draftsRaw ? (JSON.parse(draftsRaw) as Record<string, DraftPayload>) : {};
       drafts[templateId] = {
@@ -99,6 +153,8 @@ const BookBuilderPage = () => {
         coverImage: coverImage ?? null,
         background: activeBackground,
         variant: template?.variant ?? "solid",
+        titleColor: titleColor || null,
+        subtitleColor: subtitleColor || null,
         updatedAt: Date.now(),
       };
       localStorage.setItem("keeps-drafts", JSON.stringify(drafts));
@@ -139,6 +195,8 @@ const BookBuilderPage = () => {
               title={title}
               subtitle={subtitle || undefined}
               coverImageUrl={coverImage}
+              titleColor={titleColor || undefined}
+              subtitleColor={subtitleColor || undefined}
               className="w-[150px]"
               style={{ background: activeBackground }}
             />
@@ -246,6 +304,86 @@ const BookBuilderPage = () => {
                     placeholder="Small description (optional)"
                   />
                 </label>
+                <div className="flex flex-col gap-4 pt-1">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[0.58rem] uppercase tracking-[0.18em] text-ink-soft">
+                      Title color
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {titleColorOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setTitleColor(option.value)}
+                          className={clsx(
+                            "h-7 w-7 rounded-full border transition",
+                            titleColor === option.value
+                              ? "border-border-emphasis shadow-[0_0_0_2px_rgba(159,151,232,0.45)]"
+                              : "border-border-subtle hover:border-border-emphasis"
+                          )}
+                          style={{ backgroundColor: option.value }}
+                          aria-label={`Use ${option.label} for title`}
+                        />
+                      ))}
+                      <label className="flex items-center gap-2 rounded-full border border-border-subtle px-3 py-1 text-[0.55rem] uppercase tracking-[0.16em] text-ink-soft transition hover:border-border-emphasis">
+                        Custom
+                        <input
+                          type="color"
+                          value={titleColor || "#3D3D3D"}
+                          onChange={(event) => setTitleColor(event.target.value)}
+                          className="h-5 w-5 cursor-pointer border-none bg-transparent p-0"
+                          aria-label="Pick custom title color"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setTitleColor("")}
+                        className="text-[0.55rem] uppercase tracking-[0.16em] text-ink-soft transition hover:text-ink"
+                      >
+                        Default
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[0.58rem] uppercase tracking-[0.18em] text-ink-soft">
+                      Description color
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {subtitleColorOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setSubtitleColor(option.value)}
+                          className={clsx(
+                            "h-7 w-7 rounded-full border transition",
+                            subtitleColor === option.value
+                              ? "border-border-emphasis shadow-[0_0_0_2px_rgba(159,151,232,0.45)]"
+                              : "border-border-subtle hover:border-border-emphasis"
+                          )}
+                          style={{ backgroundColor: option.value }}
+                          aria-label={`Use ${option.label} for description`}
+                        />
+                      ))}
+                      <label className="flex items-center gap-2 rounded-full border border-border-subtle px-3 py-1 text-[0.55rem] uppercase tracking-[0.16em] text-ink-soft transition hover:border-border-emphasis">
+                        Custom
+                        <input
+                          type="color"
+                          value={subtitleColor || "#6F6A80"}
+                          onChange={(event) => setSubtitleColor(event.target.value)}
+                          className="h-5 w-5 cursor-pointer border-none bg-transparent p-0"
+                          aria-label="Pick custom description color"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setSubtitleColor("")}
+                        className="text-[0.55rem] uppercase tracking-[0.16em] text-ink-soft transition hover:text-ink"
+                      >
+                        Default
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 

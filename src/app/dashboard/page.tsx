@@ -34,6 +34,8 @@ const Dashboard = () => {
       }
     };
 
+    
+
     loadRecents();
     window.addEventListener("storage", loadRecents);
     return () => window.removeEventListener("storage", loadRecents);

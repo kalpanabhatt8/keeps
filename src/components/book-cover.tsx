@@ -9,6 +9,8 @@ type BookCoverBaseProps = {
   title: string;
   subtitle?: string;
   coverImageUrl?: string | null;
+  titleColor?: string;
+  subtitleColor?: string;
   className?: string;
 };
 
@@ -19,6 +21,8 @@ export function BookCover({
   title,
   subtitle,
   coverImageUrl,
+  titleColor,
+  subtitleColor,
   className,
   style,
   ...rest
@@ -38,8 +42,17 @@ export function BookCover({
           />
         ) : null}
         <div className="book-cover__content">
-          <h3 className="book-cover__title">{title}</h3>
-          {subtitle ? <p className="book-cover__subtitle">{subtitle}</p> : null}
+          <h3 className="book-cover__title" style={titleColor ? { color: titleColor } : undefined}>
+            {title}
+          </h3>
+          {subtitle ? (
+            <p
+              className="book-cover__subtitle"
+              style={subtitleColor ? { color: subtitleColor } : undefined}
+            >
+              {subtitle}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
