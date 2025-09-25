@@ -80,13 +80,10 @@ const Dashboard = () => {
               Begin with the blank notebook or pick a template. You can personalize everything on the next screen.
             </p>
           </div> */}
-          <div className="flex flex-col gap-4 text-ink">
-            {/* <span className="text-xs uppercase tracking-[0.28em] text-ink-soft">
-              Your Keeps Library
-            </span> */}
-            <h1 className="heading-font text-sm tracking-[0.2rem] uppercase text-ink-soft">
-            Start Something
-            </h1>
+          <div className="flex flex-col gap-1 text-ink">
+            <span className="text-[0.7rem] uppercase tracking-[0.3em] text-ink-soft">
+              Shelf Starters
+            </span>
           </div>
           <div className="flex flex-wrap justify-center gap-10 md:justify-start">
             <button
@@ -118,7 +115,7 @@ const Dashboard = () => {
         {recentBooks.length > 0 && (
           <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <h2 className="heading-font text-sm tracking-[0.2rem] uppercase text-ink-disabled">
+              <h2 className="text-[0.7rem] uppercase tracking-[0.3em] text-ink-soft">
               What you left open
               </h2>
               {/* <p className="body-font text-sm text-ink-muted">
@@ -128,9 +125,8 @@ const Dashboard = () => {
 
             <div className="flex flex-wrap justify-center gap-10 md:justify-start">
               {recentBooks.map((book) => (
-                <div className="flex flex-col">
+                <div key={book.id} className="flex flex-col">
                   <div
-                    key={book.id}
                     onClick={() =>
                       router.push(`/dashboard/books/${book.id}/canvas`)
                     }
