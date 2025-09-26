@@ -95,13 +95,25 @@ const CanvasPage = () => {
   return (
     <main className="min-h-screen w-full pb-24">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pt-12 md:px-10 lg:pt-16">
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard")}
-          className="self-start text-xs font-semibold uppercase tracking-[0.2em] text-ink-soft transition hover:text-ink"
-        >
-          ← Back to dashboard
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-soft transition hover:text-ink"
+          >
+            ← Back to dashboard
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.push(`/dashboard/books/${bookId}`)}
+              className="rounded-full border border-border-emphasis px-4 py-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-ink-soft transition hover:border-ink hover:text-ink"
+            >
+              Edit cover & title
+            </button>
+          </div>
+        </div>
 
         <header className="flex flex-col gap-2 text-ink">
           <span className="text-xs uppercase tracking-[0.28em] text-ink-soft">

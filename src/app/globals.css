@@ -509,7 +509,7 @@ div.recent-group{
   display: flex;
   gap: 1.4rem;
   overflow-x: auto;
-  padding: 0rem 1.4rem 4rem 0rem;
+  padding: 1rem 1.4rem 4rem 0rem;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }

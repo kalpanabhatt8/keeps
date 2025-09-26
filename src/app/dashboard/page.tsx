@@ -70,7 +70,7 @@ const Dashboard = () => {
   };
 
   const handleTemplateSelect = (templateId: string) => {
-    router.push(`/dashboard/books/${templateId}`);
+    router.push(`/dashboard/books/${templateId}/canvas`);
   };
 
   const carouselPreviewCount = 6;
