@@ -21,6 +21,13 @@ const defaultBackground: BackgroundState = {
   value: "#f6f5ff",
 };
 
+const CANVAS_SIZE = 6000;
+
+type Viewport = {
+  x: number;
+  y: number;
+};
+
 type CanvasBoardProps = {
   storageKey: string;
   initialBackground?: string;
@@ -29,6 +36,8 @@ type CanvasBoardProps = {
 const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground }) => {
   const boardRef = useRef<HTMLDivElement>(null);
   const zIndexRef = useRef<number>(1);
+  const isPanningRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [background, setBackground] = useState<BackgroundState>({
     type: "color",
@@ -37,6 +46,8 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
   const [items, setItems] = useState<CanvasElement[]>([]);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [showStickerTray, setShowStickerTray] = useState(false);
+  const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
 
   const activeItem = useMemo(
     () => items.find((item) => item.id === activeItemId) ?? null,
@@ -85,15 +96,47 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
     localStorage.setItem(storageKey, payload);
   }, [background, items, storageKey]);
 
-  const addTextItem = () => {
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+    const { clientWidth, clientHeight } = board;
+    setViewport({
+      x: (clientWidth - CANVAS_SIZE) / 2,
+      y: (clientHeight - CANVAS_SIZE) / 2,
+    });
+  }, []);
+
+  const getSpawnPosition = useCallback(
+    (width: number, height: number) => {
+      const board = boardRef.current;
+      if (!board) {
+        return {
+          x: CANVAS_SIZE / 2 - width / 2,
+          y: CANVAS_SIZE / 2 - height / 2,
+        };
+      }
+
+      const centerX = (-viewport.x + board.clientWidth / 2) / scale;
+      const centerY = (-viewport.y + board.clientHeight / 2) / scale;
+
+      return {
+        x: centerX - width / 2,
+        y: centerY - height / 2,
+      };
+    },
+    [viewport, scale]
+  );
+
+  const addTextItem = useCallback(() => {
     const id = generateId();
+    const spawn = getSpawnPosition(220, 120);
     const newItem: CanvasElement = {
       id,
       type: "text",
-      x: 120,
-      y: 120,
-      width: 200,
-      height: 90,
+      x: spawn.x,
+      y: spawn.y,
+      width: 220,
+      height: 120,
       rotation: 0,
       zIndex: zIndexRef.current + 1,
       text: "Double-click to edit",
@@ -103,25 +146,29 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
     zIndexRef.current += 1;
     setItems((prev) => [...prev, newItem]);
     setActiveItemId(id);
-  };
+  }, [getSpawnPosition]);
 
-  const addStickerItem = (src: string) => {
-    const id = generateId();
-    const newItem: CanvasElement = {
-      id,
-      type: "sticker",
-      x: 160,
-      y: 160,
-      width: 140,
-      height: 140,
-      rotation: 0,
-      zIndex: zIndexRef.current + 1,
-      src,
-    };
-    zIndexRef.current += 1;
-    setItems((prev) => [...prev, newItem]);
-    setActiveItemId(id);
-  };
+  const addStickerItem = useCallback(
+    (src: string) => {
+      const id = generateId();
+      const spawn = getSpawnPosition(180, 180);
+      const newItem: CanvasElement = {
+        id,
+        type: "sticker",
+        x: spawn.x,
+        y: spawn.y,
+        width: 180,
+        height: 180,
+        rotation: 0,
+        zIndex: zIndexRef.current + 1,
+        src,
+      };
+      zIndexRef.current += 1;
+      setItems((prev) => [...prev, newItem]);
+      setActiveItemId(id);
+    },
+    [getSpawnPosition]
+  );
 
   const handleStickerUpload = async (file: File) => {
     const reader = new FileReader();
@@ -204,27 +251,112 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
           background: background.value,
         };
 
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest(".canvas-item")) {
+      return;
+    }
+    if (event.button !== 0) return;
+    isPanningRef.current = true;
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanningRef.current) return;
+    setViewport((prev) => {
+      const dx = event.clientX - pointerStartRef.current.x;
+      const dy = event.clientY - pointerStartRef.current.y;
+      return {
+        x: prev.x + dx,
+        y: prev.y + dy,
+      };
+    });
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+  }, []);
+
+  const stopPanning = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanningRef.current) return;
+    isPanningRef.current = false;
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+  }, []);
+
+  const handleWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      if (event.ctrlKey || event.metaKey) {
+        const board = boardRef.current;
+        if (!board) return;
+        const rect = board.getBoundingClientRect();
+        const focalX = event.clientX - rect.left;
+        const focalY = event.clientY - rect.top;
+        const zoomFactor = Math.exp(-event.deltaY * 0.0015);
+        setScale((current) => {
+          const nextScale = Math.min(Math.max(current * zoomFactor, 0.3), 2.5);
+          setViewport((prev) => {
+            const worldX = (focalX - prev.x) / current;
+            const worldY = (focalY - prev.y) / current;
+            return {
+              x: focalX - worldX * nextScale,
+              y: focalY - worldY * nextScale,
+            };
+          });
+          return nextScale;
+        });
+      } else {
+        setViewport((prev) => ({ x: prev.x - event.deltaX, y: prev.y - event.deltaY }));
+      }
+    },
+    []
+  );
+
+  const worldStyle = useMemo(() => {
+    const style: React.CSSProperties = {
+      width: CANVAS_SIZE,
+      height: CANVAS_SIZE,
+      transform: `translate3d(${viewport.x}px, ${viewport.y}px, 0) scale(${scale})`,
+      transformOrigin: "0 0",
+      boxSizing: "border-box",
+      ...boardBackgroundStyle,
+    };
+
+    if (background.type === "image") {
+      style.backgroundSize = "cover";
+      style.backgroundPosition = "center";
+      style.backgroundRepeat = "no-repeat";
+    }
+
+    return style;
+  }, [background.type, boardBackgroundStyle, scale, viewport.x, viewport.y]);
+
   return (
     <div className="relative h-full w-full">
       <div
-        className="absolute inset-0 overflow-hidden bg-white"
-        style={boardBackgroundStyle}
+        className="absolute inset-0 overflow-hidden"
         ref={boardRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={stopPanning}
+        onPointerLeave={stopPanning}
+        onWheel={handleWheel}
         onClick={() => {
           setActiveItemId(null);
           setShowStickerTray(false);
         }}
       >
-        {items.map((item) => (
-          <CanvasItem
-            key={item.id}
-            item={item}
-            selected={item.id === activeItemId}
-            onSelect={handleSelectItem}
-            onChange={updateItem}
-            onDelete={handleDeleteItem}
-          />
-        ))}
+        <div className="absolute top-0 left-0" style={worldStyle}>
+          {items.map((item) => (
+            <CanvasItem
+              key={item.id}
+              item={item}
+              selected={item.id === activeItemId}
+              onSelect={handleSelectItem}
+              onChange={updateItem}
+              onDelete={handleDeleteItem}
+              scale={scale}
+            />
+          ))}
+        </div>
       </div>
 
       {activeItem ? (

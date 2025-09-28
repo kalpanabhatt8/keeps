@@ -114,7 +114,7 @@ const CanvasPage = () => {
           Dashboard
         </button>
         <span className="h-4 w-px bg-border-subtle" aria-hidden />
-        <span className="text-[0.68rem] uppercase tracking-[0.18em] text-ink-soft">
+        <span className="text-[0.68rem] text-ink-soft">
           Saved {formatRelativeTime(lastSaved)}
         </span>
       </div>
