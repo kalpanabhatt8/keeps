@@ -31,6 +31,7 @@ const Dashboard = () => {
         const raw = localStorage.getItem("keeps-recents");
         const parsed = raw ? (JSON.parse(raw) as RecentBook[]) : [];
         setRecentBooks(parsed);
+        console.log(parsed,"this is parsed")
         if (!userToggledTemplates.current) {
           setShowAllTemplates(parsed.length === 0);
         }

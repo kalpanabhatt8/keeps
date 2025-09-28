@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import { getTemplateById } from "@/data/book-templates";
+import CanvasBoard from "@/components/canvas/canvas-board";
 
 const blankDefaults = {
   id: "blank",
@@ -92,6 +93,8 @@ const CanvasPage = () => {
     return `${hours} hr${hours === 1 ? "" : "s"} ago`;
   };
 
+  const boardStorageKey = useMemo(() => `keeps-board-${bookId}`, [bookId]);
+
   return (
     <main className="min-h-screen w-full pb-24">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pt-12 md:px-10 lg:pt-16">
@@ -130,8 +133,8 @@ const CanvasPage = () => {
           </span>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.6fr)_minmax(0,1fr)]">
-          <div className="flex flex-col items-center gap-3">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,1fr)]">
+          <div className="flex flex-col items-center gap-3 rounded-3xl border border-border-subtle bg-white/80 p-6 shadow-sm">
             <BookCover
               variant={draft.variant}
               title={draft.title}
@@ -139,29 +142,18 @@ const CanvasPage = () => {
               coverImageUrl={draft.coverImage ?? undefined}
               titleColor={draft.titleColor ?? undefined}
               subtitleColor={draft.subtitleColor ?? undefined}
-              className="w-[150px]"
+              className="w-[180px]"
               style={{ background: draft.background }}
             />
             <div className="text-center text-[0.68rem] uppercase tracking-[0.2em] text-ink-soft">
               Draft cover preview
             </div>
+            <div className="text-center text-[0.62rem] text-ink-muted">
+              Cover updates when you change it in the editor.
+            </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-3xl border border-border-subtle bg-white/90 p-8 shadow-xl">
-            <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-ink-soft">
-                Canvas editor placeholder
-              </h2>
-              <p className="body-font text-sm text-ink">
-                Here we’ll render the 200vh × 200vw workspace with draggable text boxes, stickers, and page navigation. Auto-save status will live here too.
-              </p>
-            </div>
-            <div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-dashed border-border-subtle bg-surface-raised">
-              <span className="text-xs uppercase tracking-[0.25em] text-ink-muted">
-                Canvas coming soon
-              </span>
-            </div>
-          </div>
+          <CanvasBoard storageKey={boardStorageKey} initialBackground={draft.background} />
         </div>
       </section>
     </main>
