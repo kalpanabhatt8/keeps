@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import html2canvas from "html2canvas";
-import Toolbar from "./toolbar";
 import CanvasItem from "./canvas-item";
 import { BackgroundState, CanvasElement } from "./types";
 
@@ -36,6 +36,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
   });
   const [items, setItems] = useState<CanvasElement[]>([]);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [showStickerTray, setShowStickerTray] = useState(false);
 
   const activeItem = useMemo(
     () => items.find((item) => item.id === activeItemId) ?? null,
@@ -204,22 +205,15 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
         };
 
   return (
-    <div className="flex flex-col gap-4">
-      <Toolbar
-        onAddText={addTextItem}
-        onStickerSelect={addStickerItem}
-        onStickerUpload={handleStickerUpload}
-        onBackgroundColorChange={handleBackgroundColorChange}
-        onBackgroundImageUpload={handleBackgroundImageUpload}
-        onExport={handleExport}
-        presetStickers={emojiStickers}
-      />
-
+    <div className="relative h-full w-full">
       <div
-        className="relative mx-auto h-[32rem] w-full max-w-4xl overflow-hidden rounded-[32px] border border-border-subtle bg-white shadow-xl"
+        className="absolute inset-0 overflow-hidden bg-white"
         style={boardBackgroundStyle}
         ref={boardRef}
-        onClick={() => setActiveItemId(null)}
+        onClick={() => {
+          setActiveItemId(null);
+          setShowStickerTray(false);
+        }}
       >
         {items.map((item) => (
           <CanvasItem
@@ -234,7 +228,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
       </div>
 
       {activeItem ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border-subtle bg-white/80 px-4 py-3 text-xs text-ink">
+        <div className="absolute top-6 right-6 z-30 flex w-[min(90%,420px)] flex-wrap items-center gap-3 rounded-2xl border border-border-subtle bg-white/95 px-4 py-3 text-xs text-ink shadow-lg">
           <span className="font-semibold uppercase tracking-[0.22em] text-ink-soft">
             Item settings
           </span>
@@ -286,6 +280,81 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
           </button>
         </div>
       ) : null}
+
+      <div className="pointer-events-none absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border-subtle bg-white/95 px-5 py-2 shadow-lg">
+        <button
+          type="button"
+          onClick={addTextItem}
+          className="pointer-events-auto h-10 w-10 rounded-full bg-ink text-sm font-semibold text-white transition hover:opacity-90"
+          aria-label="Add text"
+        >
+          T
+        </button>
+
+        <div className="pointer-events-auto relative">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowStickerTray((prev) => !prev);
+            }}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border-subtle bg-white text-lg transition hover:border-ink"
+            aria-label="Sticker tray"
+          >
+            ⭐️
+          </button>
+          {showStickerTray ? (
+            <div className="absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 gap-2 rounded-2xl border border-border-subtle bg-white px-3 py-2 shadow-lg">
+              {emojiStickers.map((sticker) => (
+                <button
+                  key={sticker}
+                  type="button"
+                  onClick={() => {
+                    addStickerItem(sticker);
+                    setShowStickerTray(false);
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border-subtle bg-white text-lg transition hover:border-ink"
+                >
+                  <Image src={sticker} alt="Sticker" width={24} height={24} unoptimized />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <label className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-white text-sm transition hover:border-ink" aria-label="Upload sticker">
+          ⬆️
+          <input type="file" accept="image/*" className="hidden" onChange={(event) => event.target.files?.[0] && handleStickerUpload(event.target.files[0])} />
+        </label>
+
+        <label className="pointer-events-auto relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-white text-sm transition hover:border-ink" aria-label="Background color">
+          🎨
+          <input
+            type="color"
+            className="absolute h-10 w-10 cursor-pointer opacity-0"
+            onChange={(event) => handleBackgroundColorChange(event.target.value)}
+          />
+        </label>
+
+        <label className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-white text-sm transition hover:border-ink" aria-label="Background image">
+          🖼️
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => event.target.files?.[0] && handleBackgroundImageUpload(event.target.files[0])}
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={handleExport}
+          className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white transition hover:opacity-90"
+          aria-label="Export board"
+        >
+          ↓
+        </button>
+      </div>
     </div>
   );
 };
