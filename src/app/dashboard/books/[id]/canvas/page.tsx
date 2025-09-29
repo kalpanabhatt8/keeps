@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getTemplateById } from "@/data/book-templates";
 import CanvasBoard from "@/components/canvas/canvas-board";
 import { ArrowLeft, Sparkle } from "lucide-react";
+import { BookCover } from "@/components/book-cover";
 
 const blankDefaults = {
   id: "blank",
@@ -25,7 +26,6 @@ type Draft = {
   subtitleColor?: string | null;
   updatedAt: number;
 };
-
 const CanvasPage = () => {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -102,21 +102,30 @@ const CanvasPage = () => {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#f4f3ff]">
-      <CanvasBoard storageKey={boardStorageKey} initialBackground={draft.background} />
+      <CanvasBoard
+        storageKey={boardStorageKey}
+        initialBackground={draft.background}
+      />
 
       <div className="pointer-events-none absolute left-6 top-6 z-40 flex items-center gap-3 rounded-full border border-border-subtle bg-white/90 px-4 py-2 shadow-sm">
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard")}
-          className="pointer-events-auto flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"
-        >
-          <ArrowLeft size={16} />
-          <Sparkle color="#282137" />
-        </button>
-        <span className="h-4 w-px bg-border-subtle" aria-hidden />
-        <span className="text-[0.68rem] text-ink-soft">
+        <div className="flex flex-row gap-2">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="pointer-events-auto flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"
+          >
+            <Sparkle color="#282137" />
+          </button>
+          {/* <span className="h-4 w-px bg-border-subtle" aria-hidden /> */}
+
+          <h1 className="heading-font text-xl font-semibold tracking-[0.02em] text-ink-strong md:text-xl">
+            {draft.title || "Untitled Book"}
+          </h1>
+          {/* <span className="text-[0.68rem] text-ink-soft">
           Saved {formatRelativeTime(lastSaved)}
-        </span>
+        </span> */}
+        </div>
+      
       </div>
     </main>
   );
