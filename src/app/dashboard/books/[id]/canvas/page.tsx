@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getTemplateById } from "@/data/book-templates";
 import CanvasBoard from "@/components/canvas/canvas-board";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkle } from "lucide-react";
 
 const blankDefaults = {
   id: "blank",
@@ -111,7 +111,7 @@ const CanvasPage = () => {
           className="pointer-events-auto flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"
         >
           <ArrowLeft size={16} />
-          Dashboard
+          <Sparkle color="#282137" />
         </button>
         <span className="h-4 w-px bg-border-subtle" aria-hidden />
         <span className="text-[0.68rem] text-ink-soft">

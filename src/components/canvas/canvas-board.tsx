@@ -334,11 +334,11 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground
       <div
         className="absolute inset-0 overflow-hidden"
         ref={boardRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={stopPanning}
-        onPointerLeave={stopPanning}
-        onWheel={handleWheel}
+        // onPointerDown={handlePointerDown}
+        // onPointerMove={handlePointerMove}
+        // onPointerUp={stopPanning}
+        // onPointerLeave={stopPanning}
+        // onWheel={handleWheel}
         onClick={() => {
           setActiveItemId(null);
           setShowStickerTray(false);

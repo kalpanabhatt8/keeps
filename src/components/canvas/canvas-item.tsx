@@ -10,11 +10,12 @@ type CanvasItemProps = {
   onSelect: (id: string) => void;
   onChange: (id: string, updates: Partial<CanvasElement>) => void;
   onDelete: (id: string) => void;
+  scale: number;
 };
 
-function CanvasItem({ item, selected, onSelect, onChange, onDelete }: CanvasItemProps) {
+function CanvasItem({ item, selected, onSelect, onChange, onDelete, scale }: CanvasItemProps) {
   const handleDragStop = useCallback(
-    (_: MouseEvent | TouchEvent, data: { x: number; y: number }) => {
+    (_: any, data: { x: number; y: number }) => {
       onChange(item.id, { x: data.x, y: data.y });
     },
     [item.id, onChange]
@@ -22,7 +23,7 @@ function CanvasItem({ item, selected, onSelect, onChange, onDelete }: CanvasItem
 
   const handleResizeStop = useCallback(
     (
-      _: MouseEvent | TouchEvent,
+      _: any,
       __: unknown,
       ref: HTMLElement,
       ___: unknown,
@@ -62,7 +63,7 @@ function CanvasItem({ item, selected, onSelect, onChange, onDelete }: CanvasItem
       onResizeStop={handleResizeStop}
       onDragStart={() => onSelect(item.id)}
       onResizeStart={() => onSelect(item.id)}
-      onClick={(event) => {
+      onClick={(event: any) => {
         event.stopPropagation();
         onSelect(item.id);
       }}
