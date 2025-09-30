@@ -1,31 +1,160 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
-import html2canvas from "html2canvas";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import clsx from "clsx";
+import { Type, Image as ImageIcon, Palette } from "lucide-react";
 import CanvasItem from "./canvas-item";
-import { BackgroundState, CanvasElement } from "./types";
+import {
+  BackgroundMode,
+  BoardElement,
+  BoardState,
+  ImageElement,
+  TextElement,
+} from "./types";
+import { getPatternImage } from "./patterns";
 
-const emojiStickers = ["⭐️", "🌙", "✨", "🌸", "🍀", "☕️"].map((emoji) => {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='72'>${emoji}</text></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-});
+const DEFAULT_BACKGROUND: BackgroundMode = {
+  type: "solid",
+  bgColor: "#f7f7f7",
+};
+
+const SAVE_DELAY = 300;
+const INITIAL_PATTERN: BackgroundMode = {
+  type: "pattern",
+  pattern: "dots",
+  bgColor: "#f7f7f7",
+  patternColor: "#cbd5ff",
+  size: 24,
+};
 
 const generateId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 
-const defaultBackground: BackgroundState = {
-  type: "color",
-  value: "#f6f5ff",
+const normalizeBackground = (
+  raw: unknown,
+  fallback: BackgroundMode
+): BackgroundMode => {
+  if (!raw || typeof raw !== "object") return fallback;
+
+  const updates = raw as Partial<BackgroundMode>;
+
+  if (updates.type === "solid") {
+    return {
+      type: "solid",
+      bgColor: typeof updates.bgColor === "string" ? updates.bgColor : fallback.bgColor,
+    };
+  }
+
+  if (updates.type === "pattern") {
+    const pattern =
+      updates.pattern === "sparkle" || updates.pattern === "grid" ? updates.pattern : "dots";
+    const size = Number(updates.size);
+    return {
+      type: "pattern",
+      pattern,
+      bgColor:
+        typeof updates.bgColor === "string" ? updates.bgColor : fallback.bgColor,
+      patternColor:
+        typeof updates.patternColor === "string" ? updates.patternColor : "#cbd5ff",
+      size: Number.isFinite(size) ? Math.min(Math.max(size, 4), 128) : 24,
+    };
+  }
+
+  return fallback;
 };
 
-const CANVAS_SIZE = 6000;
+const normalizeElement = (raw: any, fallbackZ: number): BoardElement | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const base = {
+    id: typeof raw.id === "string" ? raw.id : generateId(),
+    x: Number.isFinite(raw.x) ? raw.x : 60,
+    y: Number.isFinite(raw.y) ? raw.y : 60,
+    w: Number.isFinite(raw.w) ? raw.w : Number.isFinite(raw.width) ? raw.width : 200,
+    h: Number.isFinite(raw.h) ? raw.h : Number.isFinite(raw.height) ? raw.height : 140,
+    rotation: Number.isFinite(raw.rotation) ? raw.rotation : 0,
+    z: Number.isFinite(raw.z) ? raw.z : fallbackZ,
+  };
 
-type Viewport = {
-  x: number;
-  y: number;
+  if (raw.kind === "text" || raw.type === "text") {
+    return {
+      ...base,
+      kind: "text",
+      text: typeof raw.text === "string" ? raw.text : "Double-click to edit",
+      fontSize: Number.isFinite(raw.fontSize) ? raw.fontSize : 20,
+      color: typeof raw.color === "string" ? raw.color : "#1f2937",
+      align:
+        raw.align === "center" || raw.align === "right" ? raw.align : "left",
+      fontFamily: typeof raw.fontFamily === "string" ? raw.fontFamily : undefined,
+      weight: Number.isFinite(raw.weight) ? raw.weight : undefined,
+    } as TextElement;
+  }
+
+  if ((raw.kind === "image" || raw.type === "image") && typeof raw.src === "string") {
+    return {
+      ...base,
+      kind: "image",
+      src: raw.src,
+      naturalW: Number.isFinite(raw.naturalW) ? raw.naturalW : undefined,
+      naturalH: Number.isFinite(raw.naturalH) ? raw.naturalH : undefined,
+    } as ImageElement;
+  }
+
+  return null;
+};
+
+const loadInitialState = (
+  storageKey: string,
+  initialBackground?: string
+): BoardState => {
+  const fallback: BackgroundMode = initialBackground
+    ? { type: "solid", bgColor: initialBackground }
+    : DEFAULT_BACKGROUND;
+
+  if (typeof window === "undefined") {
+    return { background: fallback, elements: [], selectedId: null };
+  }
+
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) {
+      return { background: fallback, elements: [], selectedId: null };
+    }
+
+    const parsed = JSON.parse(raw);
+    const background = normalizeBackground(parsed.background, fallback);
+
+    const elements: BoardElement[] = Array.isArray(parsed.elements)
+      ? parsed.elements
+          .map((item: any, index: number) => normalizeElement(item, index + 1))
+          .filter((item: BoardElement | null): item is BoardElement => Boolean(item))
+      : [];
+
+    const selectedId =
+      typeof parsed.selectedId === "string" ? parsed.selectedId : null;
+
+    return { background, elements, selectedId };
+  } catch {
+    return { background: fallback, elements: [], selectedId: null };
+  }
+};
+
+const isEditableTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    target.isContentEditable ||
+    target.closest("[data-canvas-ignore-keys]")
+  );
 };
 
 type CanvasBoardProps = {
@@ -33,458 +162,552 @@ type CanvasBoardProps = {
   initialBackground?: string;
 };
 
-const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey, initialBackground }) => {
-  const boardRef = useRef<HTMLDivElement>(null);
-  const zIndexRef = useRef<number>(1);
-  const isPanningRef = useRef(false);
-  const pointerStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  const [background, setBackground] = useState<BackgroundState>({
-    type: "color",
-    value: initialBackground ?? defaultBackground.value,
-  });
-  const [items, setItems] = useState<CanvasElement[]>([]);
-  const [activeItemId, setActiveItemId] = useState<string | null>(null);
-  const [showStickerTray, setShowStickerTray] = useState(false);
-  const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
-
-  const activeItem = useMemo(
-    () => items.find((item) => item.id === activeItemId) ?? null,
-    [items, activeItemId]
+const CanvasBoard: React.FC<CanvasBoardProps> = ({
+  storageKey,
+  initialBackground,
+}) => {
+  const [boardState, setBoardState] = useState<BoardState>(() =>
+    loadInitialState(storageKey, initialBackground)
   );
+  const [activeTool, setActiveTool] = useState<"background" | null>(null);
+  const [shiftPressed, setShiftPressed] = useState(false);
 
-  const bringToFront = useCallback(
-    (id: string) => {
-      zIndexRef.current += 1;
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                zIndex: zIndexRef.current,
-              }
-            : item
-        )
-      );
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const objectUrlsRef = useRef<Record<string, string>>({});
+  const saveTimerRef = useRef<number | null>(null);
+  const selectedIdRef = useRef<string | null>(boardState.selectedId ?? null);
+
+  useEffect(() => {
+    selectedIdRef.current = boardState.selectedId ?? null;
+  }, [boardState.selectedId]);
+
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+      Object.values(objectUrlsRef.current).forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
     },
     []
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as {
-          background: BackgroundState;
-          items: CanvasElement[];
-        };
-        setBackground(parsed.background ?? defaultBackground);
-        setItems(parsed.items ?? []);
-      } else if (initialBackground) {
-        setBackground({ type: "color", value: initialBackground });
+  const schedulePersist = useCallback(
+    (state: BoardState) => {
+      if (typeof window === "undefined") return;
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
       }
-    } catch (error) {
-      console.error("Failed to load board", error);
-    }
-  }, [storageKey, initialBackground]);
+      saveTimerRef.current = window.setTimeout(() => {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(state));
+        } catch {
+          /* ignore quota errors */
+        }
+      }, SAVE_DELAY);
+    },
+    [storageKey]
+  );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const payload = JSON.stringify({ background, items });
-    localStorage.setItem(storageKey, payload);
-  }, [background, items, storageKey]);
+  const updateBoardState = useCallback(
+    (updater: (prev: BoardState) => BoardState) => {
+      setBoardState((prev) => {
+        const next = updater(prev);
+        schedulePersist(next);
+        return next;
+      });
+    },
+    [schedulePersist]
+  );
 
-  useEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-    const { clientWidth, clientHeight } = board;
-    setViewport({
-      x: (clientWidth - CANVAS_SIZE) / 2,
-      y: (clientHeight - CANVAS_SIZE) / 2,
-    });
-  }, []);
+  const deselect = useCallback(() => {
+    updateBoardState((prev) => ({ ...prev, selectedId: null }));
+  }, [updateBoardState]);
+
+  const bringToFront = useCallback(
+    (id: string) => {
+      updateBoardState((prev) => {
+        const maxZ = prev.elements.reduce(
+          (acc, item) => Math.max(acc, item.z),
+          0
+        );
+        return {
+          ...prev,
+          elements: prev.elements.map((item) =>
+            item.id === id ? { ...item, z: maxZ + 1 } : item
+          ),
+          selectedId: id,
+        };
+      });
+    },
+    [updateBoardState]
+  );
+
+  const selectElement = useCallback(
+    (id: string) => {
+      bringToFront(id);
+    },
+    [bringToFront]
+  );
+
+  const updateElement = useCallback(
+    (id: string, updates: Partial<BoardElement>) => {
+      updateBoardState((prev) => ({
+        ...prev,
+        elements: prev.elements.map((item) =>
+          item.id === id ? ({ ...item, ...updates } as BoardElement) : item
+        ),
+      }));
+    },
+    [updateBoardState]
+  );
+
+  const removeElement = useCallback(
+    (id: string) => {
+      updateBoardState((prev) => {
+        const target = prev.elements.find((item) => item.id === id);
+        if (target?.kind === "image") {
+          const url = objectUrlsRef.current[target.id];
+          if (url) {
+            URL.revokeObjectURL(url);
+            delete objectUrlsRef.current[target.id];
+          }
+        }
+        return {
+          ...prev,
+          elements: prev.elements.filter((item) => item.id !== id),
+          selectedId: prev.selectedId === id ? null : prev.selectedId,
+        };
+      });
+    },
+    [updateBoardState]
+  );
 
   const getSpawnPosition = useCallback(
     (width: number, height: number) => {
       const board = boardRef.current;
       if (!board) {
         return {
-          x: CANVAS_SIZE / 2 - width / 2,
-          y: CANVAS_SIZE / 2 - height / 2,
+          x: Math.max(16, (window.innerWidth || 0) / 2 - width / 2),
+          y: Math.max(16, (window.innerHeight || 0) / 2 - height / 2),
         };
       }
-
-      const centerX = (-viewport.x + board.clientWidth / 2) / scale;
-      const centerY = (-viewport.y + board.clientHeight / 2) / scale;
-
       return {
-        x: centerX - width / 2,
-        y: centerY - height / 2,
+        x: board.clientWidth / 2 - width / 2,
+        y: board.clientHeight / 2 - height / 2,
       };
-    },
-    [viewport, scale]
-  );
-
-  const addTextItem = useCallback(() => {
-    const id = generateId();
-    const spawn = getSpawnPosition(220, 120);
-    const newItem: CanvasElement = {
-      id,
-      type: "text",
-      x: spawn.x,
-      y: spawn.y,
-      width: 220,
-      height: 120,
-      rotation: 0,
-      zIndex: zIndexRef.current + 1,
-      text: "Double-click to edit",
-      fontSize: 22,
-      color: "#2E2A3F",
-    };
-    zIndexRef.current += 1;
-    setItems((prev) => [...prev, newItem]);
-    setActiveItemId(id);
-  }, [getSpawnPosition]);
-
-  const addStickerItem = useCallback(
-    (src: string) => {
-      const id = generateId();
-      const spawn = getSpawnPosition(180, 180);
-      const newItem: CanvasElement = {
-        id,
-        type: "sticker",
-        x: spawn.x,
-        y: spawn.y,
-        width: 180,
-        height: 180,
-        rotation: 0,
-        zIndex: zIndexRef.current + 1,
-        src,
-      };
-      zIndexRef.current += 1;
-      setItems((prev) => [...prev, newItem]);
-      setActiveItemId(id);
-    },
-    [getSpawnPosition]
-  );
-
-  const handleStickerUpload = async (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        addStickerItem(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleBackgroundImageUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setBackground({ type: "image", value: reader.result });
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleBackgroundColorChange = (color: string) => {
-    setBackground({ type: "color", value: color });
-  };
-
-  const handleExport = async () => {
-    if (!boardRef.current) return;
-    const canvas = await html2canvas(boardRef.current, {
-      backgroundColor: null,
-      useCORS: true,
-    });
-    const dataUrl = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = "keeps-board.png";
-    link.click();
-  };
-
-  const updateItem = useCallback(
-    (id: string, updates: Partial<CanvasElement>) => {
-      setItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-      );
     },
     []
   );
 
-  const handleSelectItem = useCallback(
-    (id: string) => {
-      setActiveItemId(id);
-      bringToFront(id);
+  const addTextElement = useCallback(() => {
+    updateBoardState((prev) => {
+      const maxZ = prev.elements.reduce(
+        (acc, item) => Math.max(acc, item.z),
+        0
+      );
+      const size = { w: 260, h: 140 };
+      const spawn = getSpawnPosition(size.w, size.h);
+      const element: TextElement = {
+        id: generateId(),
+        kind: "text",
+        x: spawn.x,
+        y: spawn.y,
+        w: size.w,
+        h: size.h,
+        rotation: 0,
+        z: maxZ + 1,
+        text: "Double-click to edit",
+        fontSize: 20,
+        color: "#1f2937",
+        align: "left",
+      };
+      return {
+        ...prev,
+        elements: [...prev.elements, element as BoardElement],
+        selectedId: element.id,
+      };
+    });
+    setActiveTool(null);
+  }, [getSpawnPosition, updateBoardState]);
+
+  const addImageFromFile = useCallback(
+    (file: File, replaceId?: string) => {
+      const url = URL.createObjectURL(file);
+      const img = new window.Image();
+      img.onload = () => {
+        const maxEdge = 480;
+        const ratio = img.height ? img.width / img.height : 1;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxEdge) {
+          width = maxEdge;
+          height = width / ratio;
+        }
+        if (height > maxEdge) {
+          height = maxEdge;
+          width = height * ratio;
+        }
+
+        if (replaceId) {
+          updateBoardState((prev) => {
+            const elements = prev.elements.map((item) => {
+              if (item.id !== replaceId || item.kind !== "image") return item;
+              return {
+                ...item,
+                src: url,
+                naturalW: img.width,
+                naturalH: img.height,
+                h: item.w / ratio,
+              } as ImageElement;
+            });
+            objectUrlsRef.current[replaceId] = url;
+            return { ...prev, elements };
+          });
+        } else {
+          updateBoardState((prev) => {
+            const maxZ = prev.elements.reduce(
+              (acc, item) => Math.max(acc, item.z),
+              0
+            );
+            const spawn = getSpawnPosition(width, height);
+            const element: ImageElement = {
+              id: generateId(),
+              kind: "image",
+              x: spawn.x,
+              y: spawn.y,
+              w: width,
+              h: height,
+              rotation: 0,
+              z: maxZ + 1,
+              src: url,
+              naturalW: img.width,
+              naturalH: img.height,
+            };
+            objectUrlsRef.current[element.id] = url;
+            return {
+              ...prev,
+              elements: [...prev.elements, element],
+              selectedId: element.id,
+            };
+          });
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
     },
-    [bringToFront]
+    [getSpawnPosition, updateBoardState]
   );
 
-  const handleDeleteItem = useCallback((id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    setActiveItemId((current) => (current === id ? null : current));
+  const handleReplaceImage = useCallback(
+    (id: string, file: File) => {
+      const existing = objectUrlsRef.current[id];
+      if (existing) {
+        URL.revokeObjectURL(existing);
+        delete objectUrlsRef.current[id];
+      }
+      addImageFromFile(file, id);
+    },
+    [addImageFromFile]
+  );
+
+  const handleImageUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        addImageFromFile(file);
+      }
+      event.target.value = "";
+      setActiveTool(null);
+    },
+    [addImageFromFile]
+  );
+
+  const openImagePicker = useCallback(() => {
+    imageInputRef.current?.click();
   }, []);
+
+  const applyBackground = useCallback(
+    (updates: BackgroundMode | Partial<BackgroundMode>) => {
+      updateBoardState((prev) => {
+        let nextBackground: BackgroundMode;
+        if ("type" in updates && updates.type) {
+          nextBackground = updates as BackgroundMode;
+        } else if (prev.background.type === "pattern" && "pattern" in updates) {
+          nextBackground = { ...prev.background, ...(updates as Partial<BackgroundMode>) } as BackgroundMode;
+        } else {
+          nextBackground = { ...prev.background, ...(updates as Partial<BackgroundMode>) } as BackgroundMode;
+        }
+        return { ...prev, background: nextBackground };
+      });
+    },
+    [updateBoardState]
+  );
+
+  const boardSurfaceStyle = useMemo<React.CSSProperties>(() => {
+    if (boardState.background.type === "pattern") {
+      const pattern = boardState.background;
+      return {
+        backgroundColor: pattern.bgColor,
+        backgroundImage: getPatternImage({
+          type: pattern.pattern,
+          patternColor: pattern.patternColor,
+          size: Number(pattern.size),
+        }),
+        backgroundSize: `${Number(pattern.size)}px ${Number(pattern.size)}px`,
+        backgroundRepeat: "repeat",
+      };
+    }
+    return { backgroundColor: boardState.background.bgColor };
+  }, [boardState.background]);
+
+  const backgroundTab =
+    boardState.background.type === "pattern" ? "pattern" : "solid";
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.key === "Delete" || event.key === "Backspace") && activeItemId) {
-        handleDeleteItem(activeItemId);
+      if (event.key === "Shift") {
+        setShiftPressed(true);
+      }
+
+      if (isEditableTarget(event.target)) return;
+
+      if (
+        (event.key === "Delete" || event.key === "Backspace") &&
+        selectedIdRef.current
+      ) {
+        event.preventDefault();
+        removeElement(selectedIdRef.current);
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setActiveTool(null);
+        deselect();
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === "Shift") {
+        setShiftPressed(false);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeItemId, handleDeleteItem]);
-
-  const boardBackgroundStyle: React.CSSProperties =
-    background.type === "image"
-      ? {
-          backgroundImage: `url(${background.value})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }
-      : {
-          background: background.value,
-        };
-
-  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement;
-    if (target.closest(".canvas-item")) {
-      return;
-    }
-    if (event.button !== 0) return;
-    isPanningRef.current = true;
-    pointerStartRef.current = { x: event.clientX, y: event.clientY };
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-  }, []);
-
-  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (!isPanningRef.current) return;
-    setViewport((prev) => {
-      const dx = event.clientX - pointerStartRef.current.x;
-      const dy = event.clientY - pointerStartRef.current.y;
-      return {
-        x: prev.x + dx,
-        y: prev.y + dy,
-      };
-    });
-    pointerStartRef.current = { x: event.clientX, y: event.clientY };
-  }, []);
-
-  const stopPanning = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (!isPanningRef.current) return;
-    isPanningRef.current = false;
-    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
-  }, []);
-
-  const handleWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      if (event.ctrlKey || event.metaKey) {
-        const board = boardRef.current;
-        if (!board) return;
-        const rect = board.getBoundingClientRect();
-        const focalX = event.clientX - rect.left;
-        const focalY = event.clientY - rect.top;
-        const zoomFactor = Math.exp(-event.deltaY * 0.0015);
-        setScale((current) => {
-          const nextScale = Math.min(Math.max(current * zoomFactor, 0.3), 2.5);
-          setViewport((prev) => {
-            const worldX = (focalX - prev.x) / current;
-            const worldY = (focalY - prev.y) / current;
-            return {
-              x: focalX - worldX * nextScale,
-              y: focalY - worldY * nextScale,
-            };
-          });
-          return nextScale;
-        });
-      } else {
-        setViewport((prev) => ({ x: prev.x - event.deltaX, y: prev.y - event.deltaY }));
-      }
-    },
-    []
-  );
-
-  const worldStyle = useMemo(() => {
-    const style: React.CSSProperties = {
-      width: CANVAS_SIZE,
-      height: CANVAS_SIZE,
-      transform: `translate3d(${viewport.x}px, ${viewport.y}px, 0) scale(${scale})`,
-      transformOrigin: "0 0",
-      boxSizing: "border-box",
-      ...boardBackgroundStyle,
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
-
-    if (background.type === "image") {
-      style.backgroundSize = "cover";
-      style.backgroundPosition = "center";
-      style.backgroundRepeat = "no-repeat";
-    }
-
-    return style;
-  }, [background.type, boardBackgroundStyle, scale, viewport.x, viewport.y]);
+  }, [deselect, removeElement]);
 
   return (
-    <div className="relative h-full w-full">
-      <div
-        className="absolute inset-0 overflow-hidden"
-        ref={boardRef}
-        // onPointerDown={handlePointerDown}
-        // onPointerMove={handlePointerMove}
-        // onPointerUp={stopPanning}
-        // onPointerLeave={stopPanning}
-        // onWheel={handleWheel}
-        onClick={() => {
-          setActiveItemId(null);
-          setShowStickerTray(false);
-        }}
-      >
-        <div className="absolute top-0 left-0" style={worldStyle}>
-          {items.map((item) => (
-            <CanvasItem
-              key={item.id}
-              item={item}
-              selected={item.id === activeItemId}
-              onSelect={handleSelectItem}
-              onChange={updateItem}
-              onDelete={handleDeleteItem}
-              scale={scale}
-            />
-          ))}
-        </div>
-      </div>
+    <div
+      ref={boardRef}
+      className="relative h-screen w-screen overflow-hidden"
+      style={boardSurfaceStyle}
+      onClick={(event) => {
+        if (!(event.target as HTMLElement).closest(".canvas-item")) {
+          deselect();
+        }
+      }}
+    >
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
 
-      {activeItem ? (
-        <div className="absolute top-6 right-6 z-30 flex w-[min(90%,420px)] flex-wrap items-center gap-3 rounded-2xl border border-border-subtle bg-white/95 px-4 py-3 text-xs text-ink shadow-lg">
-          <span className="font-semibold uppercase tracking-[0.22em] text-ink-soft">
-            Item settings
-          </span>
-          <label className="flex items-center gap-2">
-            <span className="uppercase tracking-[0.18em] text-ink-soft">Rotate</span>
-            <input
-              type="range"
-              min="-180"
-              max="180"
-              value={activeItem.rotation}
-              onChange={(event) =>
-                updateItem(activeItem.id, { rotation: Number(event.target.value) })
+      {boardState.elements.map((element) => (
+        <CanvasItem
+          key={element.id}
+          element={element}
+          selected={boardState.selectedId === element.id}
+          shiftPressed={shiftPressed}
+          onSelect={selectElement}
+          onBringToFront={bringToFront}
+          onChange={updateElement}
+          onDelete={removeElement}
+          onReplaceImage={handleReplaceImage}
+        />
+      ))}
+
+      {activeTool === "background" && (
+        <div
+          data-canvas-ignore-keys
+          className="pointer-events-auto absolute bottom-24 left-1/2 z-40 w-[min(360px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl border border-border-subtle bg-white/95 p-4 shadow-xl"
+        >
+          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft">
+            Background
+          </div>
+
+          <div className="mb-4 flex gap-2">
+            <button
+              type="button"
+              className={clsx(
+                "flex-1 rounded-full border px-3 py-2 text-sm font-medium transition",
+                backgroundTab === "solid"
+                  ? "border-indigo-400 bg-indigo-50 text-indigo-500"
+                  : "border-border-subtle bg-white text-ink-soft hover:text-ink"
+              )}
+              onClick={() => applyBackground({ type: "solid" })}
+            >
+              Solid
+            </button>
+            <button
+              type="button"
+              className={clsx(
+                "flex-1 rounded-full border px-3 py-2 text-sm font-medium transition",
+                backgroundTab === "pattern"
+                  ? "border-indigo-400 bg-indigo-50 text-indigo-500"
+                  : "border-border-subtle bg-white text-ink-soft hover:text-ink"
+              )}
+              onClick={() =>
+                applyBackground({
+                  type: "pattern",
+                  pattern: "dots",
+                  bgColor:
+                    boardState.background.type === "pattern"
+                      ? boardState.background.bgColor
+                      : boardState.background.bgColor,
+                  patternColor:
+                    boardState.background.type === "pattern"
+                      ? boardState.background.patternColor
+                      : (INITIAL_PATTERN as any).patternColor,
+                  size:
+                    boardState.background.type === "pattern"
+                      ? boardState.background.size
+                      : (INITIAL_PATTERN as any).size,
+                })
               }
-            />
-          </label>
+            >
+              Pattern
+            </button>
+          </div>
 
-          {activeItem.type === "text" ? (
-            <>
-              <label className="flex items-center gap-2">
-                <span className="uppercase tracking-[0.18em] text-ink-soft">Font</span>
-                <input
-                  type="range"
-                  min="12"
-                  max="72"
-                  value={activeItem.fontSize ?? 22}
+          {boardState.background.type === "solid" && (
+            <label className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft">
+              Color
+              <input
+                type="color"
+                value={boardState.background.bgColor}
+                onChange={(event) =>
+                  applyBackground({
+                    type: "solid",
+                    bgColor: event.target.value,
+                  })
+                }
+                className="h-9 w-16 cursor-pointer rounded border border-border-subtle bg-transparent p-1"
+              />
+            </label>
+          )}
+
+          {boardState.background.type === "pattern" && (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft">
+                  Pattern
+                </span>
+                <select
+                  value={boardState.background.pattern}
                   onChange={(event) =>
-                    updateItem(activeItem.id, { fontSize: Number(event.target.value) })
+                    applyBackground({
+                      type: "pattern",
+                      pattern: event.target.value as "dots" | "sparkle" | "grid",
+                    })
                   }
-                />
-              </label>
-              <label className="flex items-center gap-2">
-                <span className="uppercase tracking-[0.18em] text-ink-soft">Color</span>
-                <input
-                  type="color"
-                  value={activeItem.color ?? "#2E2A3F"}
-                  onChange={(event) => updateItem(activeItem.id, { color: event.target.value })}
-                  className="h-6 w-6 cursor-pointer border-none bg-transparent"
-                />
-              </label>
-            </>
-          ) : null}
+                  className="w-full rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                >
+                  <option value="dots">Dots</option>
+                  <option value="sparkle">Sparkle</option>
+                  <option value="grid">Grid</option>
+                </select>
+              </div>
 
-          <button
-            type="button"
-            onClick={() => handleDeleteItem(activeItem.id)}
-            className="ml-auto rounded-full border border-border-emphasis px-3 py-1 font-semibold uppercase tracking-[0.2em] text-ink-soft transition hover:border-ink hover:text-ink"
-          >
-            Delete
-          </button>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft">
+                  Background
+                  <input
+                    type="color"
+                    value={boardState.background.bgColor}
+                    onChange={(event) =>
+                      applyBackground({ bgColor: event.target.value })
+                    }
+                    className="h-9 w-full cursor-pointer rounded border border-border-subtle bg-transparent p-1"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft">
+                  Pattern
+                  <input
+                    type="color"
+                    value={boardState.background.patternColor}
+                    onChange={(event) =>
+                      applyBackground({ patternColor: event.target.value })
+                    }
+                    className="h-9 w-full cursor-pointer rounded border border-border-subtle bg-transparent p-1"
+                  />
+                </label>
+              </div>
+
+              <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft">
+                Size
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={4}
+                    max={96}
+                    step={4}
+                    value={boardState.background.size}
+                    onChange={(event) =>
+                      applyBackground({ size: Number(event.target.value) })
+                    }
+                    className="flex-1"
+                  />
+                  <span className="text-xs font-medium text-ink">
+                    {boardState.background.size}px
+                  </span>
+                </div>
+              </label>
+            </div>
+          )}
         </div>
-      ) : null}
+      )}
 
-      <div className="pointer-events-none absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border-subtle bg-white/95 px-5 py-2 shadow-lg">
+      <div className="pointer-events-none absolute bottom-8 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3">
         <button
           type="button"
-          onClick={addTextItem}
-          className="pointer-events-auto h-10 w-10 rounded-full bg-ink text-sm font-semibold text-white transition hover:opacity-90"
-          aria-label="Add text"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-ink shadow-md transition hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          onClick={addTextElement}
         >
-          T
+          <Type size={18} />
         </button>
 
-        <div className="pointer-events-auto relative">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setShowStickerTray((prev) => !prev);
-            }}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border-subtle bg-white text-lg transition hover:border-ink"
-            aria-label="Sticker tray"
-          >
-            ⭐️
-          </button>
-          {showStickerTray ? (
-            <div className="absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 gap-2 rounded-2xl border border-border-subtle bg-white px-3 py-2 shadow-lg">
-              {emojiStickers.map((sticker) => (
-                <button
-                  key={sticker}
-                  type="button"
-                  onClick={() => {
-                    addStickerItem(sticker);
-                    setShowStickerTray(false);
-                  }}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border-subtle bg-white text-lg transition hover:border-ink"
-                >
-                  <Image src={sticker} alt="Sticker" width={24} height={24} unoptimized />
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        <label className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-white text-sm transition hover:border-ink" aria-label="Upload sticker">
-          ⬆️
-          <input type="file" accept="image/*" className="hidden" onChange={(event) => event.target.files?.[0] && handleStickerUpload(event.target.files[0])} />
-        </label>
-
-        <label className="pointer-events-auto relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-white text-sm transition hover:border-ink" aria-label="Background color">
-          🎨
-          <input
-            type="color"
-            className="absolute h-10 w-10 cursor-pointer opacity-0"
-            onChange={(event) => handleBackgroundColorChange(event.target.value)}
-          />
-        </label>
-
-        <label className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-white text-sm transition hover:border-ink" aria-label="Background image">
-          🖼️
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) => event.target.files?.[0] && handleBackgroundImageUpload(event.target.files[0])}
-          />
-        </label>
+        <button
+          type="button"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-ink shadow-md transition hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          onClick={openImagePicker}
+        >
+          <ImageIcon size={18} />
+        </button>
 
         <button
           type="button"
-          onClick={handleExport}
-          className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white transition hover:opacity-90"
-          aria-label="Export board"
+          className={clsx(
+            "pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-ink shadow-md transition focus:outline-none focus:ring-2 focus:ring-indigo-300",
+            activeTool === "background" && "bg-indigo-500 text-white"
+          )}
+          onClick={() =>
+            setActiveTool((prev) => (prev === "background" ? null : "background"))
+          }
         >
-          ↓
+          <Palette size={18} />
         </button>
       </div>
     </div>

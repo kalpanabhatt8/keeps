@@ -5,7 +5,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: #6F5DD2;
-  --color-secondary: #8978F0;
+  --color-secondary: #6c5e82;
+  /* --color-secondary: #8978F0; */
   --color-surface-base: #ECEFFF;
   --color-surface-raised: #F8F6FF;
   --color-surface-overlay: #FFFFFF;

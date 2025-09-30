@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getTemplateById } from "@/data/book-templates";
 import CanvasBoard from "@/components/canvas/canvas-board";
-import { ArrowLeft, Sparkle } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronLeft, Edit, FilePenLine, Sparkle } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 
 const blankDefaults = {
@@ -30,6 +30,8 @@ const CanvasPage = () => {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const bookId = params?.id ?? "blank";
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const template = useMemo(() => {
     if (bookId === "blank") return null;
@@ -107,25 +109,46 @@ const CanvasPage = () => {
         initialBackground={draft.background}
       />
 
-      <div className="pointer-events-none absolute left-6 top-6 z-40 flex items-center gap-3 rounded-full border border-border-subtle bg-white/90 px-4 py-2 shadow-sm">
-        <div className="flex flex-row gap-2">
+      <div className="pointer-events-none absolute left-6 top-6 z-40 flex items-center gap-3 bg-white/90 px-4 py-2 shadow-md rounded-xl">
+        <div className="flex flex-row gap-2 relative items-center">
           <button
             type="button"
-            onClick={() => router.push("/dashboard")}
-            className="pointer-events-auto flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="pointer-events-auto flex items-center gap-0.5 text-sm text-ink-soft transition hover:text-ink focus:text-primary focus:bg-surface-base p-2 rounded-md"
           >
-            <Sparkle color="#282137" />
+            <Sparkle strokeWidth={1.5} size={20} />
+            <ChevronDown strokeWidth={1} size={16} />
           </button>
+          {isMenuOpen && (
+  <div className="pointer-events-auto absolute top-full mt-2.5 left-50% z-50 w-48 rounded-xl bg-[#fafafa] shadow-lg p-2">
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard")}
+                className=" w-full pl-2 py-2.5 text-left !text-xs text-ink-soft hover:bg-secondary hover:text-white flex gap-2 rounded-lg"
+              >
+            <ChevronLeft strokeWidth={1.5} size={18} />
+                Back to Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => console.log("Edit cover page clicked")}
+                className=" w-full pl-3 py-2 text-left !text-xs text-ink-soft  hover:bg-secondary hover:text-white flex gap-2 rounded-lg"
+              >
+                  <FilePenLine strokeWidth={1.5} size={16} />
+                Edit Cover Page
+              </button>
+            </div>
+          )}
+
           {/* <span className="h-4 w-px bg-border-subtle" aria-hidden /> */}
 
-          <h1 className="heading-font text-xl font-semibold tracking-[0.02em] text-ink-strong md:text-xl">
+          <h1 className="heading-font text-md font-semibold tracking-[0.02em] text-ink-strong md:text-md">
             {draft.title || "Untitled Book"}
           </h1>
           {/* <span className="text-[0.68rem] text-ink-soft">
           Saved {formatRelativeTime(lastSaved)}
         </span> */}
         </div>
-      
       </div>
     </main>
   );

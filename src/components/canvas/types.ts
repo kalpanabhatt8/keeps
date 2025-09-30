@@ -1,21 +1,47 @@
-export type CanvasElementType = "text" | "sticker";
+export type ElementKind = "text" | "image";
 
-export type CanvasElement = {
+export type BoardElementBase = {
   id: string;
-  type: CanvasElementType;
+  kind: ElementKind;
   x: number;
   y: number;
-  width: number;
-  height: number;
-  rotation: number;
-  zIndex: number;
-  text?: string;
-  fontSize?: number;
-  color?: string;
-  src?: string;
+  w: number;
+  h: number;
+  rotation?: number;
+  z: number;
 };
 
-export type BackgroundState = {
-  type: "color" | "image";
-  value: string;
+export type TextElement = BoardElementBase & {
+  kind: "text";
+  text: string;
+  fontSize: number;
+  color: string;
+  align: "left" | "center" | "right";
+  fontFamily?: string;
+  weight?: number;
+};
+
+export type ImageElement = BoardElementBase & {
+  kind: "image";
+  src: string;
+  naturalW?: number;
+  naturalH?: number;
+};
+
+export type BoardElement = TextElement | ImageElement;
+
+export type BackgroundMode =
+  | { type: "solid"; bgColor: string }
+  | {
+      type: "pattern";
+      pattern: "dots" | "sparkle" | "grid";
+      bgColor: string;
+      patternColor: string;
+      size: number;
+    };
+
+export type BoardState = {
+  background: BackgroundMode;
+  elements: BoardElement[];
+  selectedId?: string | null;
 };

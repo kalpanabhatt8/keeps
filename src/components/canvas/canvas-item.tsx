@@ -1,132 +1,319 @@
-import React, { useCallback } from "react";
+"use client";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
+import type { DraggableData, ResizableDelta } from "react-rnd";
+import type { DraggableEvent } from "react-draggable";
+// Inline ResizeDirection type since react-rnd does not export it
 import clsx from "clsx";
-import { CanvasElement } from "./types";
 import Image from "next/image";
+import type { BoardElement, ImageElement, TextElement } from "./types";
 
 type CanvasItemProps = {
-  item: CanvasElement;
+  element: BoardElement;
   selected: boolean;
+  shiftPressed: boolean;
   onSelect: (id: string) => void;
-  onChange: (id: string, updates: Partial<CanvasElement>) => void;
+  onBringToFront: (id: string) => void;
+  onChange: (id: string, updates: Partial<BoardElement>) => void;
   onDelete: (id: string) => void;
-  scale: number;
+  onReplaceImage?: (id: string, file: File) => void;
 };
 
-function CanvasItem({ item, selected, onSelect, onChange, onDelete, scale }: CanvasItemProps) {
+const handleStyle = (visible: boolean): React.CSSProperties => ({
+  width: "14px",
+  height: "14px",
+  borderRadius: "9999px",
+  border: "1px solid rgba(15, 23, 42, 0.25)",
+  background: "rgba(255,255,255,0.95)",
+  boxShadow: "0 2px 6px rgba(15,23,42,0.18)",
+  opacity: visible ? 1 : 0,
+  transition: "opacity 0.12s ease",
+});
+
+function CanvasItem({
+  element,
+  selected,
+  shiftPressed,
+  onSelect,
+  onBringToFront,
+  onChange,
+  onDelete,
+  onReplaceImage,
+}: CanvasItemProps) {
+  const isText = element.kind === "text";
+  const isImage = element.kind === "image";
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftText, setDraftText] = useState(
+    isText ? (element as TextElement).text : ""
+  );
+
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const replaceInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (isText && !isEditing) {
+      setDraftText((element as TextElement).text);
+    }
+  }, [element, isEditing, isText]);
+
+  useEffect(() => {
+    if (isEditing && textAreaRef.current) {
+      textAreaRef.current.focus();
+      textAreaRef.current.select();
+    }
+  }, [isEditing]);
+
+  const enableResizing = useMemo(() => {
+    if (isText) return false;
+    if (isEditing) return false;
+    return {
+      top: false,
+      right: false,
+      bottom: false,
+      left: false,
+      topLeft: false,
+      topRight: false,
+      bottomLeft: true,
+      bottomRight: false,
+    };
+  }, [isText, isEditing]);
+
+  const handleStyles = useMemo(() => {
+    const visible = selected && !isEditing;
+    const base = handleStyle(visible);
+    return isText
+      ? {}
+      : {
+          bottomLeft: base,
+        };
+  }, [isText, isEditing, selected]);
+
   const handleDragStop = useCallback(
-    (_: any, data: { x: number; y: number }) => {
-      onChange(item.id, { x: data.x, y: data.y });
+    (_event: DraggableEvent, data: DraggableData) => {
+      onChange(element.id, { x: data.x, y: data.y });
     },
-    [item.id, onChange]
+    [element.id, onChange]
   );
 
   const handleResizeStop = useCallback(
     (
-      _: any,
-      __: unknown,
+      _event: MouseEvent | TouchEvent,
+      _dir: ResizeDirection,
       ref: HTMLElement,
-      ___: unknown,
+      _delta: ResizableDelta,
       position: { x: number; y: number }
     ) => {
-      onChange(item.id, {
-        width: parseFloat(ref.style.width),
-        height: parseFloat(ref.style.height),
+      onChange(element.id, {
+        w: parseFloat(ref.style.width),
+        h: parseFloat(ref.style.height),
         x: position.x,
         y: position.y,
       });
     },
-    [item.id, onChange]
+    [element.id, onChange]
   );
 
-  const handleTextBlur = useCallback(
-    (event: React.FocusEvent<HTMLDivElement>) => {
-      onChange(item.id, { text: event.currentTarget.textContent ?? "" });
-    },
-    [item.id, onChange]
-  );
-
-  const handleDeleteClick = useCallback(
+  const handleDelete = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
-      onDelete(item.id);
+      onDelete(element.id);
     },
-    [item.id, onDelete]
+    [element.id, onDelete]
   );
+
+  const handleDoubleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      if (isText) {
+        onBringToFront(element.id);
+        setIsEditing(true);
+      }
+    },
+    [element.id, isText, onBringToFront]
+  );
+
+  const handleTextBlur = useCallback(() => {
+    if (!isText) return;
+    onChange(element.id, { text: draftText });
+    setIsEditing(false);
+  }, [draftText, element.id, isText, onChange]);
+
+  const handleTextKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        handleTextBlur();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        setDraftText((element as TextElement).text);
+        setIsEditing(false);
+      }
+    },
+    [element, handleTextBlur]
+  );
+
+  const openReplacePicker = useCallback(() => {
+    if (replaceInputRef.current) {
+      replaceInputRef.current.value = "";
+      replaceInputRef.current.click();
+    }
+  }, []);
+
+  const handleReplaceChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file && onReplaceImage) {
+        onReplaceImage(element.id, file);
+      }
+      event.target.value = "";
+    },
+    [element.id, onReplaceImage]
+  );
+
+  const lockAspectRatio = isImage && !shiftPressed && !isEditing;
 
   return (
     <Rnd
+      className="canvas-item"
       bounds="parent"
-      size={{ width: item.width, height: item.height }}
-      position={{ x: item.x, y: item.y }}
-      onDragStop={handleDragStop}
-      onResizeStop={handleResizeStop}
-      onDragStart={() => onSelect(item.id)}
-      onResizeStart={() => onSelect(item.id)}
-      onClick={(event: any) => {
-        event.stopPropagation();
-        onSelect(item.id);
+      size={{ width: element.w, height: element.h }}
+      position={{ x: element.x, y: element.y }}
+      disableDragging={isEditing}
+      enableResizing={enableResizing}
+      resizeHandleStyles={handleStyles}
+      lockAspectRatio={lockAspectRatio}
+      onDragStart={() => {
+        onBringToFront(element.id);
+        onSelect(element.id);
       }}
-      className={clsx(
-        "group relative",
-        selected ? "z-20" : "z-10"
-      )}
-      style={{ zIndex: item.zIndex }}
-      enableResizing
+      onDragStop={handleDragStop}
+      onResizeStart={() => {
+        onBringToFront(element.id);
+        onSelect(element.id);
+      }}
+      onResizeStop={handleResizeStop}
+      style={{ zIndex: element.z }}
+      onClick={(event: React.MouseEvent<HTMLDivElement>) => {
+        event.stopPropagation();
+        onSelect(element.id);
+      }}
     >
       <div
         className={clsx(
-          "h-full w-full rounded-xl border transition",
-          selected ? "border-border-emphasis shadow-lg" : "border-transparent shadow-sm"
+          "relative h-[fit-content] w-[fit-content] border transition",
+          selected
+            ? "border-indigo-400 "
+            : "border-transparent"
         )}
         style={{
-          transform: `rotate(${item.rotation}deg)`,
+          transform: `rotate(${element.rotation ?? 0}deg)`,
           transformOrigin: "center",
-          backgroundColor: item.type === "text" ? "rgba(255,255,255,0.85)" : "transparent",
-          padding: item.type === "text" ? "0.5rem" : 0,
         }}
+        onDoubleClick={handleDoubleClick}
       >
-        {item.type === "text" ? (
-          <div
-            className="h-full w-full cursor-text overflow-hidden break-words text-left outline-none"
-            contentEditable
-            suppressContentEditableWarning
-            spellCheck
-            style={{
-              fontSize: item.fontSize ?? 20,
-              color: item.color ?? "#2E2A3F",
-            }}
-            onBlur={handleTextBlur}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            {item.text}
-          </div>
-        ) : item.src ? (
-          <div className="pointer-events-none relative h-full w-full">
+        {isText && (
+          <>
+            <div
+              className={clsx(
+                "flex h-full w-full cursor-text select-text break-words px-3 py-2 text-sm leading-snug text-ink",
+                isEditing && "opacity-0"
+              )}
+              style={{
+                justifyContent:
+                  (element as TextElement).align === "center"
+                    ? "center"
+                    : (element as TextElement).align === "right"
+                    ? "flex-end"
+                    : "flex-start",
+                textAlign: (element as TextElement).align,
+                color: (element as TextElement).color,
+                fontSize: (element as TextElement).fontSize,
+                fontFamily: (element as TextElement).fontFamily,
+                fontWeight: (element as TextElement).weight,
+              }}
+            >
+              {(element as TextElement).text || "Double-click to edit"}
+            </div>
+
+            {isEditing && (
+              <textarea
+                ref={textAreaRef}
+                value={draftText}
+                onChange={(event) => setDraftText(event.target.value)}
+                onBlur={handleTextBlur}
+                onKeyDown={handleTextKeyDown}
+                className="absolute inset-0 h-full w-full resize-none rounded-xl border border-indigo-400 bg-white/95 px-3 py-2 text-sm leading-snug text-ink outline-none shadow-lg"
+              />
+            )}
+          </>
+        )}
+
+        {isImage && (
+          <div className="pointer-events-none relative h-full w-full select-none">
             <Image
-              src={item.src}
-              alt="Sticker"
+              src={(element as ImageElement).src}
+              alt="Canvas asset"
               fill
-              className="object-contain"
+              className="pointer-events-none select-none object-contain"
               draggable={false}
               unoptimized
             />
           </div>
-        ) : null}
+        )}
 
-        {selected ? (
-          <button
-            type="button"
-            onClick={handleDeleteClick}
-            className="absolute -top-3 -right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-ink shadow-md"
-            aria-label="Delete item"
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="absolute -top-3 -right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-ink shadow-md transition hover:scale-105"
+          aria-label="Delete element"
+        >
+          ×
+        </button>
+
+        {isImage && selected && !isEditing && (
+          <div
+            className="pointer-events-auto absolute -top-11 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink shadow-lg"
+            data-canvas-ignore-keys
           >
-            ×
-          </button>
-        ) : null}
+            <button
+              type="button"
+              onClick={openReplacePicker}
+              className="rounded-full px-2 py-1 transition hover:text-indigo-500"
+            >
+              Replace
+            </button>
+            <span className="h-3 w-px bg-border-subtle" aria-hidden />
+            <button
+              type="button"
+              onClick={() => onDelete(element.id)}
+              className="rounded-full px-2 py-1 transition hover:text-rose-500"
+            >
+              Delete
+            </button>
+            <input
+              ref={replaceInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleReplaceChange}
+            />
+          </div>
+        )}
       </div>
     </Rnd>
   );
 }
 
 export default React.memo(CanvasItem);
+
+type ResizeDirection =
+  | "left"
+  | "right"
+  | "top"
+  | "bottom"
+  | "topLeft"
+  | "topRight"
+  | "bottomLeft"
+  | "bottomRight";
