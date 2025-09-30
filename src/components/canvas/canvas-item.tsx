@@ -25,11 +25,14 @@ const handleStyle = (visible: boolean): React.CSSProperties => ({
   height: "14px",
   borderRadius: "9999px",
   border: "1px solid rgba(15, 23, 42, 0.25)",
-  background: "rgba(255,255,255,0.95)",
+  background: visible
+    ? "rgba(255,255,255,0.95) url('/Images/resize.svg') center/70% no-repeat"
+    : "rgba(255,255,255,0.95)",
   boxShadow: "0 2px 6px rgba(15,23,42,0.18)",
   opacity: visible ? 1 : 0,
   transition: "opacity 0.12s ease",
 });
+
 
 function CanvasItem({
   element,
