@@ -1,4 +1,4 @@
-export type PatternKind = "dots" | "sparkle" | "grid";
+export type PatternKind = "dots" | "sparkle" | "grid" | "lined";
 
 export type PatternOptions = {
   type: PatternKind;
@@ -37,6 +37,11 @@ export function getPatternImage({
     return svgUrl(svg);
   }
 
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${safeSize}' height='${safeSize}' viewBox='0 0 ${safeSize} ${safeSize}' shape-rendering='crispEdges'><rect x='0' y='0' width='${safeSize}' height='1' fill='${patternColor}' /><rect x='0' y='0' width='1' height='${safeSize}' fill='${patternColor}' /></svg>`;
+  if (type === "grid") {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${safeSize}' height='${safeSize}' viewBox='0 0 ${safeSize} ${safeSize}' shape-rendering='crispEdges'><rect x='0' y='0' width='${safeSize}' height='1' fill='${patternColor}' /><rect x='0' y='0' width='1' height='${safeSize}' fill='${patternColor}' /></svg>`;
+    return svgUrl(svg);
+  }
+
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${safeSize}' height='${safeSize}' viewBox='0 0 ${safeSize} ${safeSize}' shape-rendering='crispEdges'><rect x='0' y='${safeSize / 2}' width='${safeSize}' height='1' fill='${patternColor}' /><rect x='0' y='0' width='${safeSize}' height='0.5' fill='${patternColor}' opacity='0.24' /></svg>`;
   return svgUrl(svg);
 }
