@@ -4,8 +4,16 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getTemplateById } from "@/data/book-templates";
 import CanvasBoard from "@/components/canvas/canvas-board";
-import { ArrowLeft, ChevronDown, ChevronLeft, Edit, FilePenLine, Sparkle } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronLeft,
+  Edit,
+  FilePenLine,
+  Sparkle,
+} from "lucide-react";
 import { BookCover } from "@/components/book-cover";
+import Popup from "reactjs-popup";
 
 const blankDefaults = {
   id: "blank",
@@ -31,7 +39,6 @@ const CanvasPage = () => {
   const router = useRouter();
   const bookId = params?.id ?? "blank";
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const template = useMemo(() => {
     if (bookId === "blank") return null;
@@ -109,42 +116,128 @@ const CanvasPage = () => {
         initialBackground={draft.background}
       />
 
-      <div className="pointer-events-none absolute left-6 top-6 z-40 flex items-center gap-3 bg-white/90 px-4 py-2 shadow-md rounded-xl">
+      <div className="pointer-events-none absolute left-4 top-4 z-40 flex items-center gap-3 bg-white/90 p-1 shadow-md rounded-lg">
         <div className="flex flex-row gap-2 relative items-center">
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="pointer-events-auto flex items-center gap-0.5 text-sm text-ink-soft transition hover:text-ink focus:text-primary focus:bg-surface-base p-2 rounded-md"
+          {/* <Popup
+            trigger={
+              <button
+                type="button"
+                className="pointer-events-auto flex items-center gap-0.5 text-sm text-ink-soft transition hover:text-ink focus:text-primary focus:bg-surface-base p-2 rounded-md"
+              >
+                <Sparkle strokeWidth={1.5} size={20} />
+                <ChevronDown strokeWidth={1} size={16} />
+              </button>
+            }
+            position="bottom center"
+            closeOnDocumentClick
+            arrow={false}
+            contentStyle={{
+              padding: 0,
+              border: "none",
+              borderRadius: "0.75rem",
+              boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.10)",
+              background: "white",
+              minWidth: "14rem",
+              zIndex: 50,
+            }}
+            overlayStyle={{ background: "none" }}
           >
-            <Sparkle strokeWidth={1.5} size={20} />
-            <ChevronDown strokeWidth={1} size={16} />
-          </button>
-          {isMenuOpen && (
-  <div className="pointer-events-auto absolute top-full mt-2.5 left-50% z-50 w-48 rounded-xl bg-[#fafafa] shadow-lg p-2">
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className=" w-full pl-2 py-2.5 text-left !text-xs text-ink-soft hover:bg-secondary hover:text-white flex gap-2 rounded-lg"
-              >
-            <ChevronLeft strokeWidth={1.5} size={18} />
-                Back to Dashboard
-              </button>
-              <button
-                type="button"
-                onClick={() => console.log("Edit cover page clicked")}
-                className=" w-full pl-3 py-2 text-left !text-xs text-ink-soft  hover:bg-secondary hover:text-white flex gap-2 rounded-lg"
-              >
+            {((close: () => void) => (
+              <div className="pointer-events-auto w-56 rounded-xl bg-white shadow-xl ring-1 ring-black/5 backdrop-blur-md p-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    router.push("/dashboard");
+                    close();
+                  }}
+                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 !text-sm text-ink-soft transition hover:bg-primary hover:text-white"
+                >
+                  <ChevronLeft strokeWidth={1.5} size={18} />
+                  Back to Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log("Edit cover page clicked");
+                    close();
+                  }}
+                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 !text-sm text-ink-soft transition hover:bg-primary hover:text-white"
+                >
                   <FilePenLine strokeWidth={1.5} size={16} />
-                Edit Cover Page
+                  Edit Cover Page
+                </button>
+              </div>
+            )) as unknown as React.ReactNode}
+          </Popup> */}
+
+          <Popup
+            trigger={(open: boolean) => (
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={open}
+                className={`pointer-events-auto flex items-center gap-0.5 text-sm transition p-2 rounded-md hover:text-ink focus:text-primary focus:bg-surface-base ${open ? "bg-surface-base text-ink" : "text-ink-soft"}`}
+              >
+                <Sparkle
+                  strokeWidth={1.5}
+                  size={18}
+                  className={`${open ? "opacity-100" : "opacity-90"} transition-opacity`}
+                />
+                <ChevronDown
+                  strokeWidth={1}
+                  size={16}
+                  className={`${open ? "rotate-180" : ""} transition-transform duration-200`}
+                />
               </button>
-            </div>
-          )}
+            )}
+            position="bottom left"
+            offsetY={5}
+            closeOnDocumentClick
+            arrow={false}
+            contentStyle={{
+              padding: 0,
+              border: "none",
+              borderRadius: "0.75rem",
+              boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.10)",
+              background: "white",
+              // minWidth: "14rem",
+              zIndex: 50,
+            }}
+            overlayStyle={{ background: "none" }}
+          >
+            {((close: () => void) => (
+              <div className="pointer-events-auto w-56 rounded-xl bg-white shadow-xl ring-1 ring-black/5 backdrop-blur-md p-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    router.push("/dashboard");
+                    close();
+                  }}
+                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition hover:bg-primary hover:text-white"
+                >
+                  <ChevronLeft strokeWidth={1.5} size={18} />
+                  Back to Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log("Edit cover page clicked");
+                    close();
+                  }}
+                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition hover:bg-primary hover:text-white"
+                >
+                  <FilePenLine strokeWidth={1.5} size={16} />
+                  Edit Cover Page
+                </button>
+              </div>
+            )) as unknown as React.ReactNode}
+          </Popup>
 
           {/* <span className="h-4 w-px bg-border-subtle" aria-hidden /> */}
 
-          <h1 className="heading-font text-md font-semibold tracking-[0.02em] text-ink-strong md:text-md">
+          {/* <h1 className="heading-font text-md font-semibold tracking-[0.02em] text-ink-strong md:text-md">
             {draft.title || "Untitled Book"}
-          </h1>
+          </h1> */}
           {/* <span className="text-[0.68rem] text-ink-soft">
           Saved {formatRelativeTime(lastSaved)}
         </span> */}

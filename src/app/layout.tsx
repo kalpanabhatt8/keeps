@@ -77,6 +77,51 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
 });
 
+export const allFonts = [
+  "var(--font-minecraftia)",
+  "var(--font-caress)",
+  "var(--font-vensfolk)",
+  "var(--font-bricolage)",
+  "var(--font-manrope)",
+  "var(--font-lato)",
+  "var(--font-caveat)",
+  "var(--font-Poppins)",
+  "var(--font-plaster)",
+  "var(--font-patrik-hand)",
+  "var(--font-space-grotesk)",
+];
+
+export const fontsByTheme = {
+  neutral: [
+    "var(--font-minecraftia)",
+    "var(--font-caress)",
+    "var(--font-vensfolk)",
+    "var(--font-bricolage)",
+    "var(--font-manrope)",
+    "var(--font-lato)",
+    "var(--font-caveat)",
+    "var(--font-Poppins)",
+    "var(--font-plaster)",
+    "var(--font-patrik-hand)",
+    "var(--font-space-grotesk)",
+  ],
+  kawaii: [
+    "var(--font-caveat)",
+    "var(--font-patrik-hand)",
+    "var(--font-Poppins)",
+  ],
+  retro: [
+    "var(--font-minecraftia)",
+    "var(--font-vensfolk)",
+    "var(--font-plaster)",
+  ],
+  anime: [
+    "var(--font-manrope)",
+    "var(--font-space-grotesk)",
+    "var(--font-lato)",
+  ],
+};
+
 export const metadata: Metadata = {
   title: "Keeps",
   description: "A private, playful scrapbook to plan, rant, dream, and collect pretty things.",
