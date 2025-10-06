@@ -1,11 +1,36 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
-// import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Bricolage_Grotesque, Manrope, Caveat, Space_Grotesk, Patrick_Hand, Poppins, Plaster, Lato } from "next/font/google";
 
-// Local font (Minecraftia)
+// Google Fonts
+import { 
+  Bricolage_Grotesque, 
+  Manrope, 
+  Caveat, 
+  Space_Grotesk, 
+  Patrick_Hand, 
+  Poppins, 
+  Plaster, 
+  Lato,
+  Hachi_Maru_Pop,
+  Cute_Font,
+  Bangers,
+  Gloria_Hallelujah,
+  Comic_Neue,
+  Mochiy_Pop_One,
+  Kosugi_Maru,
+  Baloo_2,
+  Yusei_Magic,
+  Press_Start_2P,
+  Gochi_Hand,
+  Mali,
+  Elsie,
+  Indie_Flower,
+  Kaushan_Script
+} from "next/font/google";
+
+// Local fonts
 const minecraftia = localFont({
   src: "../../public/fonts/Minecraftia-Regular.ttf",
   variable: "--font-minecraftia",
@@ -21,6 +46,7 @@ const vensfolk = localFont({
   variable: "--font-vensfolk",
 });
 
+// Existing Google fonts
 const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -53,7 +79,7 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700","800" ],
   display: "swap",
-  variable: "--font-Poppins",
+  variable: "--font-poppins",
 });
 
 const plaster = Plaster({
@@ -67,59 +93,105 @@ const patrickHand = Patrick_Hand({
   subsets: ["latin"],
   weight: ["400"],
   display: "swap",
-  variable: "--font-patrik-hand",
+  variable: "--font-patrick-hand",
 });
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", ],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
   variable: "--font-space-grotesk",
 });
 
-export const allFonts = [
-  "var(--font-minecraftia)",
-  "var(--font-caress)",
-  "var(--font-vensfolk)",
-  "var(--font-bricolage)",
-  "var(--font-manrope)",
-  "var(--font-lato)",
-  "var(--font-caveat)",
-  "var(--font-Poppins)",
-  "var(--font-plaster)",
-  "var(--font-patrik-hand)",
-  "var(--font-space-grotesk)",
-];
+// 🎀 Kawaii theme fonts
+const hachiMaruPop = Hachi_Maru_Pop({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-hachimarupop",
+});
+const cuteFont = Cute_Font({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-cutefont",
+});
+const kawaiiBangers = Bangers({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-bangers",
+});
 
-export const fontsByTheme = {
-  neutral: [
-    "var(--font-minecraftia)",
-    "var(--font-caress)",
-    "var(--font-vensfolk)",
-    "var(--font-bricolage)",
-    "var(--font-manrope)",
-    "var(--font-lato)",
-    "var(--font-caveat)",
-    "var(--font-Poppins)",
-    "var(--font-plaster)",
-    "var(--font-patrik-hand)",
-    "var(--font-space-grotesk)",
-  ],
-  kawaii: [
-    "var(--font-caveat)",
-    "var(--font-patrik-hand)",
-    "var(--font-Poppins)",
-  ],
-  retro: [
-    "var(--font-minecraftia)",
-    "var(--font-vensfolk)",
-    "var(--font-plaster)",
-  ],
-  anime: [
-    "var(--font-manrope)",
-    "var(--font-space-grotesk)",
-    "var(--font-lato)",
-  ],
+// 🕹️ Retro theme fonts
+const retroGloria = Gloria_Hallelujah({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-gloria",
+});
+const comicNeue = Comic_Neue({
+  subsets: ["latin"],
+  weight: ["300", "400", "700"],
+  variable: "--font-comicneue",
+});
+
+// 🎌 Anime theme fonts
+const mochiyPop = Mochiy_Pop_One({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-mochiy",
+});
+const kosugiMaru = Kosugi_Maru({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-kosugimaru",
+});
+const baloo2 = Baloo_2({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-baloo2",
+});
+const yuseiMagic = Yusei_Magic({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-yusei",
+});
+const pressStart = Press_Start_2P({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-pressstart",
+});
+
+// 📓 Journal theme fonts
+const gochiHand = Gochi_Hand({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-gochi",
+});
+const mali = Mali({
+  subsets: ["latin"],
+  weight: ["300","400","500","600","700"],
+  variable: "--font-mali",
+});
+const elsie = Elsie({
+  subsets: ["latin"],
+  weight: ["400","900"],
+  variable: "--font-elsie",
+});
+const indieFlower = Indie_Flower({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-indieflower",
+});
+const kaushan = Kaushan_Script({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-kaushan",
+});
+
+// Theme groups
+export const themeFonts = {
+  kawaii: [hachiMaruPop, cuteFont, kawaiiBangers],
+  retro: [retroGloria, comicNeue, kawaiiBangers],
+  anime: [mochiyPop, kosugiMaru, baloo2, yuseiMagic, pressStart],
+  journal: [gochiHand, mali, elsie, indieFlower, kaushan],
 };
 
 export const metadata: Metadata = {
@@ -129,9 +201,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <ClerkProvider
       appearance={{
@@ -157,7 +227,16 @@ export default function RootLayout({
     >
       <html
         lang="en"
-        className={`${minecraftia.variable} ${caress.variable} ${vensfolk.variable} ${bricolageGrotesque.variable} ${manrope.variable} ${caveat.variable} ${patrickHand.variable} ${spaceGrotesk.variable} ${poppins.variable}  ${plaster.variable} ${lato.variable}  `}
+        className={`
+          ${minecraftia.variable} ${caress.variable} ${vensfolk.variable} 
+          ${bricolageGrotesque.variable} ${manrope.variable} ${caveat.variable} 
+          ${patrickHand.variable} ${spaceGrotesk.variable} ${poppins.variable} 
+          ${plaster.variable} ${lato.variable} 
+          ${hachiMaruPop.variable} ${cuteFont.variable} ${kawaiiBangers.variable}
+          ${retroGloria.variable} ${comicNeue.variable}
+          ${mochiyPop.variable} ${kosugiMaru.variable} ${baloo2.variable} ${yuseiMagic.variable} ${pressStart.variable}
+          ${gochiHand.variable} ${mali.variable} ${elsie.variable} ${indieFlower.variable} ${kaushan.variable}
+        `}
       >
         <body className={`${manrope.className} font-sans`}>{children}</body>
       </html>

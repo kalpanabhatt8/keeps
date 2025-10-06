@@ -171,7 +171,7 @@ const CanvasPage = () => {
           </Popup> */}
 
           <Popup
-            trigger={(open: boolean) => (
+           trigger={({ open }: { open: boolean }) => (
               <button
                 type="button"
                 aria-haspopup="menu"
