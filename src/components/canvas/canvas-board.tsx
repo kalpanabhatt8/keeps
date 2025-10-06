@@ -185,7 +185,10 @@ type AudioElement = {
   playing: boolean;
 };
 // Theme → icon mapping for the Sticker tool
-const stickerIconByTheme: Record<Theme, React.ComponentType<{ size?: number }>> = {
+const stickerIconByTheme: Record<
+  Theme,
+  React.ComponentType<{ size?: number }>
+> = {
   neutral: LucideSmile,
   kawaii: LucideHeart,
   retro: LucideDisc,
@@ -193,6 +196,359 @@ const stickerIconByTheme: Record<Theme, React.ComponentType<{ size?: number }>> 
 };
 
 import React, { useEffect } from "react";
+// --- Minimal MusicSearchPopup ---
+import { LucideSearch, LucidePlay } from "lucide-react";
+
+// Example playlists and songs (10–20 total, grouped by a few categories)
+const musicCategories = [
+  {
+    name: "Chill Beats",
+    tracks: [
+      {
+        title: "Lofi Vibes",
+        src: "https://cdn.pixabay.com/audio/2022/10/16/audio_12c6f8.mp3",
+      },
+      {
+        title: "Evening Walk",
+        src: "https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b.mp3",
+      },
+      {
+        title: "Calm Rain",
+        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b4e.mp3",
+      },
+    ],
+  },
+  {
+    name: "Upbeat",
+    tracks: [
+      {
+        title: "Fun Times",
+        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b0f.mp3",
+      },
+      {
+        title: "Sunny Day",
+        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b2b.mp3",
+      },
+      {
+        title: "Jumpstart",
+        src: "https://cdn.pixabay.com/audio/2022/10/16/audio_12c6f4.mp3",
+      },
+    ],
+  },
+  {
+    name: "Relaxation",
+    tracks: [
+      {
+        title: "Gentle Stream",
+        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b19.mp3",
+      },
+      {
+        title: "Peaceful Night",
+        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b3c.mp3",
+      },
+      {
+        title: "Dreamscape",
+        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b5d.mp3",
+      },
+    ],
+  },
+  {
+    name: "Anime Inspired",
+    tracks: [
+      {
+        title: "Sakura Wind",
+        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b4e.mp3",
+      },
+      {
+        title: "Pixel Adventure",
+        src: "https://cdn.pixabay.com/audio/2022/10/16/audio_12c6f7.mp3",
+      },
+    ],
+  },
+];
+
+const allTracks = musicCategories.flatMap((cat) => cat.tracks);
+
+type MusicSearchPopupProps = {
+  theme: Theme;
+  addAudioElement: (src: string, title?: string) => void;
+};
+
+const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
+  theme,
+  addAudioElement,
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const [currentTrack, setCurrentTrack] = React.useState<null | {
+    src: string;
+    title: string;
+  }>(null);
+  const [playing, setPlaying] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+
+  // Play/pause logic: only one audio at a time
+  React.useEffect(() => {
+    if (audioRef.current) {
+      if (playing) {
+        audioRef.current.play();
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [playing, currentTrack]);
+
+  // Filtered tracks for search
+  const filteredTracks = search
+    ? allTracks.filter((t) =>
+        t.title.toLowerCase().includes(search.toLowerCase())
+      )
+    : allTracks;
+
+  // Minimal panel theme styling
+  const contentStyle = {
+    width: 260,
+    padding: "0.5rem",
+    borderRadius: "0.75rem",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
+    background: undefined as string | undefined,
+  };
+  // Set theme bg color
+  if (theme === "neutral") contentStyle.background = "#fff";
+  else if (theme === "kawaii") contentStyle.background = "#ffe4ef";
+  else if (theme === "retro") contentStyle.background = "#fef7d5";
+  else if (theme === "anime") contentStyle.background = "#ede9fe";
+
+  // Play a track
+  const handlePlay = (track: { src: string; title: string }) => {
+    setCurrentTrack(track);
+    setPlaying(true);
+  };
+  // Pause
+  const handlePause = () => setPlaying(false);
+  // Add to canvas as audio element
+  const handleAddToCanvas = () => {
+    if (currentTrack) {
+      addAudioElement(currentTrack.src, currentTrack.title);
+    }
+  };
+
+  // Show minimal view or search view
+  return (
+    <Popup
+      trigger={
+        <button
+          aria-label="Music"
+          className={clsx(
+            buttonClass(theme),
+            hoverFX(theme),
+            "ml-2"
+          )}
+          type="button"
+        >
+          <LucideMusic size={18} />
+        </button>
+      }
+      position="bottom right"
+      closeOnDocumentClick
+      arrow={false}
+      contentStyle={contentStyle}
+      open={open}
+      onOpen={() => {
+        setOpen(true);
+        setSearchOpen(false);
+        setSearch("");
+      }}
+      onClose={() => setOpen(false)}
+    >
+      <div
+        className={clsx(
+          "flex flex-col gap-2",
+          panelThemeClass(theme)
+        )}
+        style={{ minHeight: 120 }}
+      >
+        {/* Header row: no title, just search icon right */}
+        <div className="flex items-center justify-between mb-1">
+          <div />
+          <button
+            type="button"
+            aria-label="Search music"
+            className={clsx(
+              "rounded-full p-2 hover:bg-gray-100",
+              theme === "kawaii" && "hover:bg-pink-200",
+              theme === "retro" && "hover:bg-yellow-200",
+              theme === "anime" && "hover:bg-purple-200"
+            )}
+            style={{ marginLeft: "auto" }}
+            onClick={() => setSearchOpen((v) => !v)}
+          >
+            <LucideSearch size={16} />
+          </button>
+        </div>
+        {/* Main content */}
+        {!searchOpen ? (
+          // Minimal view: show categories and short list
+          <div className="flex flex-col gap-2">
+            {musicCategories.map((cat) => (
+              <div key={cat.name} className="mb-1">
+                <div className="text-xs font-bold opacity-60 mb-1 ml-1">{cat.name}</div>
+                <ul className="flex flex-col gap-1">
+                  {cat.tracks.map((track) => (
+                    <li
+                      key={track.title}
+                      className="flex items-center justify-between px-2 py-1 rounded hover:bg-gray-100"
+                      style={
+                        theme === "kawaii"
+                          ? { background: undefined }
+                          : theme === "retro"
+                          ? { background: undefined }
+                          : theme === "anime"
+                          ? { background: undefined }
+                          : undefined
+                      }
+                    >
+                      <span className="truncate text-sm">{track.title}</span>
+                      <button
+                        aria-label={
+                          currentTrack && currentTrack.src === track.src && playing
+                            ? "Pause"
+                            : "Play"
+                        }
+                        className={clsx(
+                          "rounded-full p-1 ml-2",
+                          theme === "kawaii" && "hover:bg-pink-200",
+                          theme === "retro" && "hover:bg-yellow-200",
+                          theme === "anime" && "hover:bg-purple-200"
+                        )}
+                        onClick={() =>
+                          currentTrack && currentTrack.src === track.src && playing
+                            ? handlePause()
+                            : handlePlay(track)
+                        }
+                        style={{ fontSize: 16, minWidth: 32 }}
+                        type="button"
+                      >
+                        {currentTrack && currentTrack.src === track.src && playing
+                          ? "⏸"
+                          : <LucidePlay size={16} />}
+                      </button>
+                      {/* Add to canvas button, only if playing this track */}
+                      {currentTrack && currentTrack.src === track.src && playing && (
+                        <button
+                          className={clsx(
+                            "rounded px-2 py-0.5 text-xs ml-2",
+                            theme === "kawaii"
+                              ? "bg-pink-200 text-pink-800"
+                              : theme === "retro"
+                              ? "bg-yellow-200 text-yellow-800"
+                              : theme === "anime"
+                              ? "bg-purple-200 text-purple-800"
+                              : "bg-gray-200 text-black"
+                          )}
+                          onClick={handleAddToCanvas}
+                          type="button"
+                        >
+                          Add to Canvas
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Search view: input + full song list
+          <div className="flex flex-col gap-2 items-center">
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search music..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={clsx(
+                "rounded px-3 py-1 w-full mb-2 border",
+                theme === "kawaii"
+                  ? "border-pink-300 bg-pink-50"
+                  : theme === "retro"
+                  ? "border-yellow-300 bg-yellow-50"
+                  : theme === "anime"
+                  ? "border-purple-300 bg-purple-50"
+                  : "border-gray-200 bg-white"
+              )}
+              style={{ fontSize: 15, textAlign: "center" }}
+            />
+            <ul className="w-full flex flex-col gap-1">
+              {filteredTracks.length === 0 && (
+                <li className="text-xs text-center opacity-60 py-2">No results.</li>
+              )}
+              {filteredTracks.map((track) => (
+                <li
+                  key={track.title}
+                  className="flex items-center justify-between px-2 py-1 rounded hover:bg-gray-100"
+                >
+                  <span className="truncate text-sm">{track.title}</span>
+                  <button
+                    aria-label={
+                      currentTrack && currentTrack.src === track.src && playing
+                        ? "Pause"
+                        : "Play"
+                    }
+                    className={clsx(
+                      "rounded-full p-1 ml-2",
+                      theme === "kawaii" && "hover:bg-pink-200",
+                      theme === "retro" && "hover:bg-yellow-200",
+                      theme === "anime" && "hover:bg-purple-200"
+                    )}
+                    onClick={() =>
+                      currentTrack && currentTrack.src === track.src && playing
+                        ? handlePause()
+                        : handlePlay(track)
+                    }
+                    style={{ fontSize: 16, minWidth: 32 }}
+                    type="button"
+                  >
+                    {currentTrack && currentTrack.src === track.src && playing
+                      ? "⏸"
+                      : <LucidePlay size={16} />}
+                  </button>
+                  {/* Add to canvas button, only if playing this track */}
+                  {currentTrack && currentTrack.src === track.src && playing && (
+                    <button
+                      className={clsx(
+                        "rounded px-2 py-0.5 text-xs ml-2",
+                        theme === "kawaii"
+                          ? "bg-pink-200 text-pink-800"
+                          : theme === "retro"
+                          ? "bg-yellow-200 text-yellow-800"
+                          : theme === "anime"
+                          ? "bg-purple-200 text-purple-800"
+                          : "bg-gray-200 text-black"
+                      )}
+                      onClick={handleAddToCanvas}
+                      type="button"
+                    >
+                      Add to Canvas
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {/* Persistent audio player (hidden) */}
+        <audio
+          ref={audioRef}
+          src={currentTrack?.src}
+          style={{ display: "none" }}
+          onEnded={() => setPlaying(false)}
+        />
+      </div>
+    </Popup>
+  );
+};
 import dynamic from "next/dynamic";
 import {
   LucideType,
@@ -232,18 +588,20 @@ import {
 import clsx from "clsx";
 const Popup = dynamic(() => import("reactjs-popup"), { ssr: false });
 // import { LucideType } from "";
+// (The duplicate MusicSearchPopup definition is removed below.)
 
 type Theme = "neutral" | "kawaii" | "retro" | "anime";
 
 // Shared tokens for theme-aware styling (buttons, hover, panels)
 const buttonClass = (theme: Theme) =>
-  `p-3 rounded-full flex items-center justify-center transition ${theme === "neutral"
-    ? "bg-white text-black"
-    : theme === "kawaii"
+  `p-3 rounded-full flex items-center justify-center transition ${
+    theme === "neutral"
+      ? "bg-white text-black"
+      : theme === "kawaii"
       ? "bg-pink-200 text-pink-800"
       : theme === "retro"
-        ? "bg-yellow-200 text-brown-800"
-        : "bg-purple-200 text-purple-800"
+      ? "bg-yellow-200 text-brown-800"
+      : "bg-purple-200 text-purple-800"
   }`;
 
 const hoverFX = (theme: Theme) => {
@@ -266,10 +624,10 @@ const panelThemeClass = (theme: Theme) =>
   theme === "neutral"
     ? "bg-white text-black"
     : theme === "kawaii"
-      ? "bg-pink-100 text-pink-800"
-      : theme === "retro"
-        ? "bg-yellow-100 text-yellow-800"
-        : "bg-purple-100 text-purple-800";
+    ? "bg-pink-100 text-pink-800"
+    : theme === "retro"
+    ? "bg-yellow-100 text-yellow-800"
+    : "bg-purple-100 text-purple-800";
 
 // Theme → icon mapping specifically for the Background tool
 const backgroundIconByTheme: Record<
@@ -291,7 +649,10 @@ const textIconByTheme: Record<Theme, React.ComponentType<{ size?: number }>> = {
 };
 
 // Theme → icon mapping for the Sticky Note button
-const stickyNoteIconByTheme: Record<Theme, React.ComponentType<{ size?: number }>> = {
+const stickyNoteIconByTheme: Record<
+  Theme,
+  React.ComponentType<{ size?: number }>
+> = {
   neutral: LucideStickyNote,
   kawaii: LucideHeart,
   retro: LucideFileText,
@@ -299,7 +660,10 @@ const stickyNoteIconByTheme: Record<Theme, React.ComponentType<{ size?: number }
 };
 
 // Theme → icon mapping for the Audio tool
-const audioIconByTheme: Record<Theme, React.ComponentType<{ size?: number }>> = {
+const audioIconByTheme: Record<
+  Theme,
+  React.ComponentType<{ size?: number }>
+> = {
   neutral: LucideMusic,
   kawaii: LucideMusic4,
   retro: LucideDisc,
@@ -313,7 +677,10 @@ import {
   LucideMicVocal,
   LucideMicOff,
 } from "lucide-react";
-const musicIconByTheme: Record<Theme, React.ComponentType<{ size?: number }>> = {
+const musicIconByTheme: Record<
+  Theme,
+  React.ComponentType<{ size?: number }>
+> = {
   neutral: LucideMic,
   kawaii: LucideMic2,
   retro: LucideMicVocal,
@@ -719,7 +1086,9 @@ const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
   const handleMicClick = async () => {
     if (!isRecording) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         chunksRef.current = [];
@@ -798,7 +1167,6 @@ const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
   );
 };
 
-
 const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
   const [theme, setTheme] = React.useState<Theme>("neutral");
   const [background, setBackground] = React.useState<{
@@ -844,7 +1212,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
     setSelectedStickyId(id);
     setSelectedTextId(null);
     setSelectedImageId(null);
-    
+
     const el = stickyNotes.find((el) => el.id === id);
     if (!el) return;
     const startX = e.clientX;
@@ -1081,8 +1449,12 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
   };
 
   // --- Sticker elements state and handlers ---
-  const [stickerElements, setStickerElements] = React.useState<StickerElement[]>([]);
-  const [selectedStickerId, setSelectedStickerId] = React.useState<string | null>(null);
+  const [stickerElements, setStickerElements] = React.useState<
+    StickerElement[]
+  >([]);
+  const [selectedStickerId, setSelectedStickerId] = React.useState<
+    string | null
+  >(null);
 
   // Add sticker element (from file or src)
   const addStickerElement = (src: string) => {
@@ -1247,7 +1619,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
   };
   // --- Audio elements state and handlers ---
   const [audioElements, setAudioElements] = React.useState<AudioElement[]>([]);
-  const [selectedAudioId, setSelectedAudioId] = React.useState<string | null>(null);
+  const [selectedAudioId, setSelectedAudioId] = React.useState<string | null>(
+    null
+  );
 
   // Add a new audio element
   const addAudioElement = (src: string, title?: string, artist?: string) => {
@@ -1313,7 +1687,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
           // Toggle playing state
           const newPlaying = !el.playing;
           // Play/pause the audio tag
-          const audioTag = document.getElementById(`audio-${id}`) as HTMLAudioElement | null;
+          const audioTag = document.getElementById(
+            `audio-${id}`
+          ) as HTMLAudioElement | null;
           if (audioTag) {
             if (newPlaying) {
               audioTag.play();
@@ -1324,7 +1700,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
           return { ...el, playing: newPlaying };
         } else {
           // Pause others
-          const audioTag = document.getElementById(`audio-${el.id}`) as HTMLAudioElement | null;
+          const audioTag = document.getElementById(
+            `audio-${el.id}`
+          ) as HTMLAudioElement | null;
           if (audioTag) audioTag.pause();
           return { ...el, playing: false };
         }
@@ -1457,12 +1835,13 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
   // Find the selected image element
   const selectedImage = imageElements.find((el) => el.id === selectedImageId);
 
-  // Toolbar buttons
-  // Build toolbar buttons, inserting Music tool before Delete/Trash
-  const toolbarButtons = [
-    // ...other tool buttons...
-    // We'll assemble them in the render below.
-  ];
+// Toolbar buttons
+// Build toolbar buttons, inserting Music tool before Delete/Trash
+const toolbarButtons = [
+  // ...other tool buttons...
+  // We'll assemble them in the render below.
+];
+// Duplicate definition of MusicSearchPopup removed.
 
   return (
     <div
@@ -1525,6 +1904,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
       )}
       <div className="absolute top-4 right-4 flex gap-2">
         <ThemeSelector theme={theme} setTheme={setTheme} />
+        <MusicSearchPopup theme={theme} addAudioElement={addAudioElement} />
       </div>
       <p className="text-lg font-semibold">Canvas board reset</p>
       <p className="text-sm">
@@ -1557,7 +1937,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                   background: "#f0fdf4",
                   borderRadius: 12,
                   boxShadow: "0 2px 10px rgba(0,128,64,0.10)",
-                  border: isSelected ? "2px solid #22c55e" : "1.5px solid #a7f3d0",
+                  border: isSelected
+                    ? "2px solid #22c55e"
+                    : "1.5px solid #a7f3d0",
                   zIndex: el.zIndex ?? 25,
                   cursor: "move",
                   userSelect: "none",
@@ -1585,7 +1967,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                   title={el.playing ? "Pause" : "Play"}
                   className={clsx(
                     "m-3 rounded-full w-10 h-10 flex items-center justify-center text-white",
-                    el.playing ? "bg-green-600" : "bg-green-400 hover:bg-green-500"
+                    el.playing
+                      ? "bg-green-600"
+                      : "bg-green-400 hover:bg-green-500"
                   )}
                   style={{ flexShrink: 0, fontSize: 20 }}
                   type="button"
@@ -1594,11 +1978,16 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                 </button>
                 {/* Title/artist info */}
                 <div className="flex-1 py-2 pr-2 min-w-0">
-                  <div className="font-semibold text-green-900 truncate" style={{ fontSize: 15 }}>
+                  <div
+                    className="font-semibold text-green-900 truncate"
+                    style={{ fontSize: 15 }}
+                  >
                     {el.title || "Audio"}
                   </div>
                   {el.artist && (
-                    <div className="text-green-700 text-xs truncate">{el.artist}</div>
+                    <div className="text-green-700 text-xs truncate">
+                      {el.artist}
+                    </div>
                   )}
                 </div>
                 {/* Delete button */}
@@ -1839,8 +2228,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                   top: el.y,
                   width: el.width,
                   height: el.height,
-                  transform: `rotate(${el.rotation}deg)${el.flip ? " scaleX(-1)" : ""
-                    }`,
+                  transform: `rotate(${el.rotation}deg)${
+                    el.flip ? " scaleX(-1)" : ""
+                  }`,
                   cursor: "move",
                   userSelect: "none",
                   zIndex: el.zIndex ?? 10,
@@ -1890,8 +2280,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                           borderRadius: 4,
                           opacity: el.opacity ?? 1,
                           pointerEvents: "none",
-                          filter: `${el.texture ? "brightness(0.97) contrast(1.08)" : ""
-                            } ${el.filter ?? ""}`,
+                          filter: `${
+                            el.texture ? "brightness(0.97) contrast(1.08)" : ""
+                          } ${el.filter ?? ""}`,
                           transition: "box-shadow 0.2s",
                           boxShadow: el.texture
                             ? "0 4px 16px rgba(0,0,0,0.12)"
@@ -1958,8 +2349,9 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                         borderRadius: 4,
                         opacity: el.opacity ?? 1,
                         pointerEvents: "none",
-                        filter: `${el.texture ? "brightness(0.97) contrast(1.08)" : ""
-                          } ${el.filter ?? ""}`,
+                        filter: `${
+                          el.texture ? "brightness(0.97) contrast(1.08)" : ""
+                        } ${el.filter ?? ""}`,
                         transition: "box-shadow 0.2s",
                         boxShadow: el.texture
                           ? "0 4px 16px rgba(0,0,0,0.12)"
@@ -2222,7 +2614,10 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                         // Try to get previous sibling or parent
                         let el = sel.anchorNode.parentElement;
                         // Try to find the previous line's text
-                        if (el.previousSibling && el.previousSibling.textContent) {
+                        if (
+                          el.previousSibling &&
+                          el.previousSibling.textContent
+                        ) {
                           prevLine = el.previousSibling.textContent;
                         } else if (el.textContent) {
                           prevLine = el.textContent;
@@ -2239,7 +2634,10 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                         let range = sel.getRangeAt(0);
                         let preCaretRange = range.cloneRange();
                         preCaretRange.selectNodeContents(e.currentTarget);
-                        preCaretRange.setEnd(range.endContainer, range.endOffset);
+                        preCaretRange.setEnd(
+                          range.endContainer,
+                          range.endOffset
+                        );
                         let preCaretText = preCaretRange.toString();
                         caretPos = preCaretText.length;
                         // Find which line
@@ -2258,7 +2656,8 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
                       let bullet = "";
                       if (
                         (prevLine && /^\s*• /.test(prevLine)) ||
-                        (lines[caretLineIdx] && /^\s*• /.test(lines[caretLineIdx]))
+                        (lines[caretLineIdx] &&
+                          /^\s*• /.test(lines[caretLineIdx]))
                       ) {
                         bullet = "• ";
                         // Insert bullet at caret
@@ -2463,74 +2862,74 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
           );
         })}
       </div>
-    <div className="absolute bottom-8 flex gap-3 items-center">
-      <BackgroundPopup
-        theme={theme}
-        setBackground={setBackground}
-        background={background}
-        onAddImage={addImageElement}
-      />
-      {/* Always render Add Text button */}
-      <button
-        className={clsx(buttonClass(theme), hoverFX(theme))}
-        onClick={addTextElement}
-        title="Add text"
-        type="button"
-      >
-        {React.createElement(textIconByTheme[theme], { size: 18 })}
-      </button>
-      {/* Sticky Note button */}
-      <button
-        className={clsx(buttonClass(theme), hoverFX(theme))}
-        onClick={addStickyNote}
-        title="Add sticky note"
-        type="button"
-      >
-        {React.createElement(stickyNoteIconByTheme[theme], { size: 18 })}
-      </button>
-      {/* Sticker Sheet Button (custom popup) */}
-      <StickerSheetButton
-        Icon={stickerIconByTheme[theme]}
-        theme={theme}
-        addStickerElement={addStickerElement}
-      />
-      {/* Other toolbar icons */}
-      {filteredIcons.map((Icon, index) => {
-        // Special case for image tool (LucideImage)
-        if (Icon === LucideImage) {
-          return (
-            <ImageToolButton
-              Icon={Icon}
-              theme={theme}
-              addImageElement={addImageElement}
-              key={index}
-            />
-          );
-        }
-        // Default rendering for other icons
-        // return (
-        //   <button
-        //     key={index}
-        //     className={clsx(buttonClass(theme), hoverFX(theme))}
-        //   >
-        //     <Icon size={18} />
-        //   </button>
-        // );
-      })}
-      {/* MusicSearchPopup (Spotify/YouTube search, upload, record) */}
-      <MusicSearchPopup theme={theme} addAudioElement={addAudioElement} />
-      {/* AudioPopup */}
-      <AudioPopup theme={theme} onAddAudio={addAudioElement} />
-      {/* Clear canvas button */}
-      <button
-        className={clsx(buttonClass(theme), hoverFX(theme))}
-        onClick={clearCanvas}
-        title="Clear canvas"
-        type="button"
-      >
-        <Trash2 size={18} />
-      </button>
-    </div>
+      <div className="absolute bottom-8 flex gap-3 items-center">
+        <BackgroundPopup
+          theme={theme}
+          setBackground={setBackground}
+          background={background}
+          onAddImage={addImageElement}
+        />
+        {/* Always render Add Text button */}
+        <button
+          className={clsx(buttonClass(theme), hoverFX(theme))}
+          onClick={addTextElement}
+          title="Add text"
+          type="button"
+        >
+          {React.createElement(textIconByTheme[theme], { size: 18 })}
+        </button>
+        {/* Sticky Note button */}
+        <button
+          className={clsx(buttonClass(theme), hoverFX(theme))}
+          onClick={addStickyNote}
+          title="Add sticky note"
+          type="button"
+        >
+          {React.createElement(stickyNoteIconByTheme[theme], { size: 18 })}
+        </button>
+        {/* Sticker Sheet Button (custom popup) */}
+        <StickerSheetButton
+          Icon={stickerIconByTheme[theme]}
+          theme={theme}
+          addStickerElement={addStickerElement}
+        />
+        {/* Other toolbar icons */}
+        {filteredIcons.map((Icon, index) => {
+          // Special case for image tool (LucideImage)
+          if (Icon === LucideImage) {
+            return (
+              <ImageToolButton
+                Icon={Icon}
+                theme={theme}
+                addImageElement={addImageElement}
+                key={index}
+              />
+            );
+          }
+          // Default rendering for other icons
+          // return (
+          //   <button
+          //     key={index}
+          //     className={clsx(buttonClass(theme), hoverFX(theme))}
+          //   >
+          //     <Icon size={18} />
+          //   </button>
+          // );
+        })}
+        {/* MusicSearchPopup (Spotify/YouTube search, upload, record) */}
+        {/* <MusicSearchPopup theme={theme} addAudioElement={addAudioElement} /> */}
+        {/* AudioPopup */}
+        <AudioPopup theme={theme} onAddAudio={addAudioElement} />
+        {/* Clear canvas button */}
+        <button
+          className={clsx(buttonClass(theme), hoverFX(theme))}
+          onClick={clearCanvas}
+          title="Clear canvas"
+          type="button"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
       {/* Render sticker elements (draggable, resizable, rotatable, deletable) */}
       {stickerElements
         .slice()
@@ -2703,141 +3102,141 @@ const ImagePopupToolbar: React.FC<{
   sendBackward,
   replaceSrc,
 }) => {
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const triggerFileInput = () => fileInputRef.current?.click();
-    const onReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        replaceSrc(url);
-      }
-    };
-    return (
-      <div
-        className="absolute left-1/2 -translate-x-1/2 -top-20 z-50 flex gap-2 items-center bg-white shadow-lg rounded p-2 border border-gray-200"
-        style={{
-          minWidth: 250,
-          whiteSpace: "nowrap",
-          fontFamily: "Inter, Arial, sans-serif",
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {/* Texture */}
-        <div className="flex gap-1 items-center">
-          <span className="text-xs">Texture</span>
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const triggerFileInput = () => fileInputRef.current?.click();
+  const onReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      replaceSrc(url);
+    }
+  };
+  return (
+    <div
+      className="absolute left-1/2 -translate-x-1/2 -top-20 z-50 flex gap-2 items-center bg-white shadow-lg rounded p-2 border border-gray-200"
+      style={{
+        minWidth: 250,
+        whiteSpace: "nowrap",
+        fontFamily: "Inter, Arial, sans-serif",
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {/* Texture */}
+      <div className="flex gap-1 items-center">
+        <span className="text-xs">Texture</span>
+        <button
+          className={clsx(
+            "px-2 py-1 rounded text-xs",
+            !element.texture ? "bg-blue-200" : "bg-gray-100"
+          )}
+          onClick={() => updateElement({ texture: undefined })}
+          title="No texture"
+        >
+          None
+        </button>
+        {textures.map(({ name, style }) => (
           <button
+            key={name}
+            onClick={() => updateElement({ texture: style })}
             className={clsx(
               "px-2 py-1 rounded text-xs",
-              !element.texture ? "bg-blue-200" : "bg-gray-100"
+              element.texture === style ? "bg-blue-200" : "bg-gray-100"
             )}
-            onClick={() => updateElement({ texture: undefined })}
-            title="No texture"
+            style={{
+              backgroundImage: style,
+              backgroundSize: "auto",
+              backgroundRepeat: "repeat",
+            }}
+            title={name}
           >
-            None
+            {name}
           </button>
-          {textures.map(({ name, style }) => (
-            <button
-              key={name}
-              onClick={() => updateElement({ texture: style })}
-              className={clsx(
-                "px-2 py-1 rounded text-xs",
-                element.texture === style ? "bg-blue-200" : "bg-gray-100"
-              )}
-              style={{
-                backgroundImage: style,
-                backgroundSize: "auto",
-                backgroundRepeat: "repeat",
-              }}
-              title={name}
-            >
-              {name}
-            </button>
-          ))}
-          {/* Opacity */}
-          <input
-            type="range"
-            min={0.1}
-            max={1}
-            step={0.05}
-            value={element.opacity ?? 1}
-            onChange={(e) => updateElement({ opacity: Number(e.target.value) })}
-            style={{ width: 48 }}
-            title="Texture opacity"
-          />
-        </div>
-        {/* Filter controls */}
-        <div className="flex gap-1 items-center">
-          <span className="text-xs">Filter</span>
-          <button
-            className="px-2 py-1 rounded text-xs bg-gray-100"
-            onClick={() => updateElement({ filter: "none" })}
-          >
-            None
-          </button>
-          <button
-            className="px-2 py-1 rounded text-xs bg-gray-100"
-            onClick={() => updateElement({ filter: "grayscale(100%)" })}
-          >
-            B/W
-          </button>
-          <button
-            className="px-2 py-1 rounded text-xs bg-gray-100"
-            onClick={() => updateElement({ filter: "sepia(60%)" })}
-          >
-            Vintage
-          </button>
-          <button
-            className="px-2 py-1 rounded text-xs bg-gray-100"
-            onClick={() =>
-              updateElement({ filter: "contrast(1.5) saturate(1.2)" })
-            }
-          >
-            Pop
-          </button>
-        </div>
-        {/* Frame */}
-        <div className="flex gap-1 items-center">
-          <span className="text-xs">Frame</span>
-          {frames.map(({ name, value }) => (
-            <button
-              key={name}
-              className={clsx(
-                "px-2 py-1 rounded text-xs",
-                element.frame === value ? "bg-blue-200" : "bg-gray-100"
-              )}
-              onClick={() => updateElement({ frame: value })}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-        {/* Replace */}
-        <button
-          className="px-2 py-1 rounded text-xs bg-yellow-100 hover:bg-yellow-200"
-          title="Replace image"
-          type="button"
-          onClick={triggerFileInput}
-        >
-          Replace
-        </button>
+        ))}
+        {/* Opacity */}
         <input
-          type="file"
-          accept="image/*"
-          onChange={onReplace}
-          ref={fileInputRef}
-          className="hidden"
+          type="range"
+          min={0.1}
+          max={1}
+          step={0.05}
+          value={element.opacity ?? 1}
+          onChange={(e) => updateElement({ opacity: Number(e.target.value) })}
+          style={{ width: 48 }}
+          title="Texture opacity"
         />
-        {/* Delete */}
+      </div>
+      {/* Filter controls */}
+      <div className="flex gap-1 items-center">
+        <span className="text-xs">Filter</span>
         <button
-          className="px-2 py-1 rounded text-xs bg-red-100 hover:bg-red-300 text-red-700"
-          title="Delete"
-          type="button"
-          onClick={deleteElement}
+          className="px-2 py-1 rounded text-xs bg-gray-100"
+          onClick={() => updateElement({ filter: "none" })}
         >
-          🗑️
+          None
         </button>
-        {/* Layer control */}
-        {/* <button
+        <button
+          className="px-2 py-1 rounded text-xs bg-gray-100"
+          onClick={() => updateElement({ filter: "grayscale(100%)" })}
+        >
+          B/W
+        </button>
+        <button
+          className="px-2 py-1 rounded text-xs bg-gray-100"
+          onClick={() => updateElement({ filter: "sepia(60%)" })}
+        >
+          Vintage
+        </button>
+        <button
+          className="px-2 py-1 rounded text-xs bg-gray-100"
+          onClick={() =>
+            updateElement({ filter: "contrast(1.5) saturate(1.2)" })
+          }
+        >
+          Pop
+        </button>
+      </div>
+      {/* Frame */}
+      <div className="flex gap-1 items-center">
+        <span className="text-xs">Frame</span>
+        {frames.map(({ name, value }) => (
+          <button
+            key={name}
+            className={clsx(
+              "px-2 py-1 rounded text-xs",
+              element.frame === value ? "bg-blue-200" : "bg-gray-100"
+            )}
+            onClick={() => updateElement({ frame: value })}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+      {/* Replace */}
+      <button
+        className="px-2 py-1 rounded text-xs bg-yellow-100 hover:bg-yellow-200"
+        title="Replace image"
+        type="button"
+        onClick={triggerFileInput}
+      >
+        Replace
+      </button>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={onReplace}
+        ref={fileInputRef}
+        className="hidden"
+      />
+      {/* Delete */}
+      <button
+        className="px-2 py-1 rounded text-xs bg-red-100 hover:bg-red-300 text-red-700"
+        title="Delete"
+        type="button"
+        onClick={deleteElement}
+      >
+        🗑️
+      </button>
+      {/* Layer control */}
+      {/* <button
         className="px-2 py-1 rounded text-xs bg-gray-100"
         title="Bring forward"
         onClick={bringForward}
@@ -2851,9 +3250,9 @@ const ImagePopupToolbar: React.FC<{
       >
         ▼
       </button> */}
-      </div>
-    );
-  };
+    </div>
+  );
+};
 
 // Manual rotate handle for text elements
 const RotateHandle: React.FC<{
@@ -3244,7 +3643,8 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
     left: "50%",
     transform: "translateX(-50%)",
     bottom: 0,
-    transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s cubic-bezier(0.4,0,0.2,1)",
+    transition:
+      "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s cubic-bezier(0.4,0,0.2,1)",
     zIndex: 100,
   };
 
@@ -3286,452 +3686,480 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
       onClose={closePopup}
       modal
     >
-   
-        <div
-          className={clsx(
-            "flex flex-col gap-2",
-            panelThemeClass(theme),
-            "rounded-t-2xl"
-          )}
-          style={{
-            minHeight: 220,
-            minWidth: 340, 
-            maxWidth: 420,
-            padding: "0",
-            position: "relative",
-            transition: "background 0.2s",
-          }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-black/10">
-            <div className="flex items-center gap-2">
-              <ThemeIcon size={22} />
-              <span className="font-semibold text-lg">Stickers</span>
-            </div>
-         <button
-              className="rounded-full p-2 text-gray-500 hover:bg-gray-200 transition"
-              aria-label="Close"
-              type="button"
-              onClick={closePopup}
-            >
-              <span style={{ fontSize: 18 }}>✖</span>
-            </button>
-          </div>
-          {/* Sticker grid */}
-          <div className="px-5 py-4">
-            <div className="grid grid-cols-3 gap-4">
-              {stickers.map((sticker, idx) => (
-                <button
-                  key={sticker.name}
-                  type="button"
-                  className={clsx(
-                    "rounded-xl bg-white shadow hover:shadow-lg transition border border-transparent hover:border-blue-400 flex items-center justify-center p-2"
-                  )}
-                  style={{
-                    width: 72,
-                    height: 72,
-                  }}
-                  title={sticker.name}
-                  onClick={() => {
-                    addStickerElement(sticker.url);
-                    close();
-                  }}
-                >
-                  <img
-                    src={sticker.url}
-                    alt={sticker.name}
-                    style={{
-                      width: 56,
-                      height: 56,
-                      objectFit: "contain",
-                      pointerEvents: "none",
-                      display: "block",
-                    }}
-                    draggable={false}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Upload sticker */}
-          <div className="px-5 pb-4 flex items-center">
-            <button
-              className={clsx(
-                "rounded bg-blue-500 px-4 py-2 text-white font-medium hover:bg-blue-600 transition"
-              )}
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Upload Sticker
-            </button>
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              className="hidden"
-              onChange={handleUpload}
-            />
-          </div>
-        </div>
-    
-    </Popup>
-  );
-};
-type MusicSearchPopupProps = {
-  theme: Theme;
-  addAudioElement: (src: string, title?: string, artist?: string) => void;
-};
-
-const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({ theme, addAudioElement }) => {
-  const [open, setOpen] = React.useState(false);
-  const [source, setSource] = React.useState<"youtube" | "spotify">("youtube");
-  const [query, setQuery] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [results, setResults] = React.useState<
-    Array<{
-      id: string;
-      title: string;
-      artist?: string;
-      duration: string;
-      thumbnail?: string;
-      src: string;
-    }>
-  >([]);
-  const [previewId, setPreviewId] = React.useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  // Small built-in audio (mock preview) - short beep WAV
-  const MOCK_AUDIO_SRC =
-    "data:audio/wav;base64,UklGRmQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA//8AAP//AAD//wAA//8AAP//AAD//wAA"; // ultra-short placeholder tone
-
-  const openPopup = () => setOpen(true);
-  const closePopup = () => {
-    setOpen(false);
-    setPreviewId(null);
-  };
-
-  const doSearch = () => {
-    setLoading(true);
-    setError(null);
-    // Simulate async search with mock data
-    window.setTimeout(() => {
-      // Create 5 mock tracks using the current query + source
-      const base = query.trim() || (source === "spotify" ? "Lo-fi Focus" : "Chill Beats");
-      const mock = Array.from({ length: 5 }).map((_, i) => ({
-        id: `${source}-${Date.now()}-${i}`,
-        title: `${base} #${i + 1}`,
-        artist: source === "spotify" ? "Mock Artist" : "Mock Channel",
-        duration: ["2:03", "3:12", "1:47", "2:56", "4:05"][i % 5],
-        thumbnail:
-          "data:image/svg+xml;utf8," +
-          encodeURIComponent(
-            `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='80'><rect width='120' height='80' fill='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%236b7280'>${source.toUpperCase()}</text></svg>`
-          ),
-        src: MOCK_AUDIO_SRC,
-      }));
-      setResults(mock);
-      setLoading(false);
-    }, 600);
-  };
-
-  const handlePreview = (id: string, src: string) => {
-    try {
-      // stop others
-      const prevTags = document.querySelectorAll("audio[data-music-preview='1']");
-      prevTags.forEach((a) => (a as HTMLAudioElement).pause());
-      setPreviewId((cur) => (cur === id ? null : id));
-      // play this one if toggled on
-      window.setTimeout(() => {
-        const tag = document.getElementById(`music-preview-${id}`) as HTMLAudioElement | null;
-        if (tag) {
-          if (previewId === id) {
-            tag.pause();
-          } else {
-            tag.currentTime = 0;
-            tag.play().catch(() => void 0);
-          }
-        }
-      }, 0);
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleAddToCanvas = (item: { src: string; title: string; artist?: string }) => {
-    addAudioElement(item.src, item.title, item.artist);
-  };
-
-  const triggerFilePicker = () => fileInputRef.current?.click();
-
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    addAudioElement(url, file.name);
-    // Reset input value so same file can be picked again
-    e.target.value = "";
-    setOpen(false);
-  };
-
-  // --- Recording via MediaRecorder (mock-friendly; will no-op if unavailable) ---
-  const [recording, setRecording] = React.useState(false);
-  const [recURL, setRecURL] = React.useState<string | null>(null);
-  const mediaStreamRef = React.useRef<MediaStream | null>(null);
-  const recorderRef = React.useRef<MediaRecorder | null>(null);
-  const chunksRef = React.useRef<BlobPart[]>([]);
-
-  const startRecording = async () => {
-    try {
-      setError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-      const rec = new MediaRecorder(stream);
-      recorderRef.current = rec;
-      chunksRef.current = [];
-      rec.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        setRecURL(url);
-      };
-      rec.start();
-      setRecording(true);
-    } catch (err) {
-      setError("Microphone permission denied");
-    }
-  };
-
-  const stopRecording = () => {
-    recorderRef.current?.stop();
-    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-    setRecording(false);
-  };
-
-  const addRecording = () => {
-    if (!recURL) return;
-    addAudioElement(recURL, "Recording");
-    setRecURL(null);
-    setOpen(false);
-  };
-
-  // Button/icon trigger (theme-aware styles; using a simple note glyph for universal compatibility)
-  const TriggerButton = (
-    <button
-      className={clsx(buttonClass(theme), hoverFX(theme))}
-      aria-label="Music"
-      title="Music"
-      type="button"
-    >
-      {/* Using a simple glyph to avoid introducing new icon imports */}
-      <span aria-hidden="true" style={{ fontSize: 16 }}>♪</span>
-    </button>
-  );
-
-  return (
-    <Popup
-      trigger={TriggerButton}
-      position="top center"
-      closeOnDocumentClick
-      arrow={false}
-      contentStyle={{ padding: 0, border: "none", background: "transparent" }}
-      open={open}
-      onOpen={openPopup}
-      onClose={closePopup}
-      modal
-    >
       <div
-        className={clsx("flex flex-col rounded-t-2xl", panelThemeClass(theme))}
+        className={clsx(
+          "flex flex-col gap-2",
+          panelThemeClass(theme),
+          "rounded-t-2xl"
+        )}
         style={{
-          minWidth: 480,
-          maxWidth: 640,
-          borderRadius: "1rem 1rem 0 0",
-          boxShadow: "0 -4px 24px rgba(0,0,0,0.10)",
+          minHeight: 220,
+          minWidth: 340,
+          maxWidth: 420,
+          padding: "0",
+          position: "relative",
+          transition: "background 0.2s",
         }}
       >
-        {/* Header Row */}
-        <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-black/10">
-          {/* Left: Source + Search */}
-          <div className="flex items-center gap-2 flex-1">
-            <div className="inline-flex rounded overflow-hidden border border-black/10">
-              <button
-                type="button"
-                className={clsx(
-                  "px-3 py-1.5 text-sm",
-                  source === "youtube" ? "bg-white/80" : "bg-transparent"
-                )}
-                onClick={() => setSource("youtube")}
-                aria-pressed={source === "youtube"}
-              >
-                YouTube
-              </button>
-              <button
-                type="button"
-                className={clsx(
-                  "px-3 py-1.5 text-sm",
-                  source === "spotify" ? "bg-white/80" : "bg-transparent"
-                )}
-                onClick={() => setSource("spotify")}
-                aria-pressed={source === "spotify"}
-              >
-                Spotify
-              </button>
-            </div>
-
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={source === "spotify" ? "Search tracks or artists" : "Search videos"}
-              className="flex-1 px-3 py-2 text-sm rounded border border-black/10 bg-white/80 outline-none"
-              aria-label="Search"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") doSearch();
-              }}
-            />
-            <button
-              type="button"
-              onClick={doSearch}
-              className="px-3 py-2 text-sm rounded bg-blue-500 text-white hover:bg-blue-600"
-              aria-label="Search"
-            >
-              Search
-            </button>
-          </div>
-
-          {/* Right: Upload + Record */}
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-black/10">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={triggerFilePicker}
-              className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
-              aria-label="Upload audio"
-            >
-              Upload
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*"
-              className="hidden"
-              onChange={onFileChange}
-            />
-
-            {!recording ? (
-              <button
-                type="button"
-                onClick={startRecording}
-                className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
-                aria-label="Start recording"
-              >
-                Record
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={stopRecording}
-                className="px-3 py-2 text-sm rounded bg-red-500 text-white hover:bg-red-600"
-                aria-label="Stop recording"
-              >
-                Stop
-              </button>
-            )}
+            <ThemeIcon size={22} />
+            <span className="font-semibold text-lg">Stickers</span>
           </div>
-        </div>
-
-        {/* Body */}
-        <div className="px-5 py-4">
-          {error && (
-            <div className="mb-3 text-sm text-red-600" role="alert">{error}</div>
-          )}
-
-          {recording && (
-            <div className="mb-4 text-sm">Recording... speak now. Click Stop to finish.</div>
-          )}
-          {recURL && (
-            <div className="mb-4 flex items-center gap-2">
-              <audio controls src={recURL} className="h-8" />
-              <button
-                type="button"
-                onClick={addRecording}
-                className="px-3 py-1.5 text-sm rounded bg-green-500 text-white hover:bg-green-600"
-              >
-                Add to Canvas
-              </button>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="grid gap-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-14 rounded bg-gray-200 animate-pulse" />
-              ))}
-            </div>
-          ) : results.length === 0 ? (
-            <div className="text-sm text-gray-500">Start by searching for music or upload/record your own.</div>
-          ) : (
-            <ul className="divide-y divide-black/10">
-              {results.map((item) => (
-                <li key={item.id} className="flex items-center gap-3 py-2">
-                  <img
-                    src={item.thumbnail}
-                    alt=""
-                    className="w-16 h-10 rounded object-cover bg-gray-200"
-                    draggable={false}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{item.title}</div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {item.artist} • {item.duration}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handlePreview(item.id, item.src)}
-                      className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200"
-                      aria-label="Preview"
-                      title="Preview"
-                    >
-                      {previewId === item.id ? "Pause" : "Preview"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddToCanvas(item)}
-                      className="px-2 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600"
-                      aria-label="Add to Canvas"
-                      title="Add to Canvas"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  {/* Hidden preview audio tag */}
-                  <audio
-                    id={`music-preview-${item.id}`}
-                    data-music-preview="1"
-                    src={item.src}
-                    style={{ display: "none" }}
-                    onEnded={() => setPreviewId(null)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 pb-4">
           <button
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-200 transition"
+            aria-label="Close"
             type="button"
             onClick={closePopup}
-            className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
           >
-            Close
+            <span style={{ fontSize: 18 }}>✖</span>
           </button>
+        </div>
+        {/* Sticker grid */}
+        <div className="px-5 py-4">
+          <div className="grid grid-cols-3 gap-4">
+            {stickers.map((sticker, idx) => (
+              <button
+                key={sticker.name}
+                type="button"
+                className={clsx(
+                  "rounded-xl bg-white shadow hover:shadow-lg transition border border-transparent hover:border-blue-400 flex items-center justify-center p-2"
+                )}
+                style={{
+                  width: 72,
+                  height: 72,
+                }}
+                title={sticker.name}
+                onClick={() => {
+                  addStickerElement(sticker.url);
+                  close();
+                }}
+              >
+                <img
+                  src={sticker.url}
+                  alt={sticker.name}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    objectFit: "contain",
+                    pointerEvents: "none",
+                    display: "block",
+                  }}
+                  draggable={false}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Upload sticker */}
+        <div className="px-5 pb-4 flex items-center">
+          <button
+            className={clsx(
+              "rounded bg-blue-500 px-4 py-2 text-white font-medium hover:bg-blue-600 transition"
+            )}
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Upload Sticker
+          </button>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleUpload}
+          />
         </div>
       </div>
     </Popup>
   );
 };
+// type MusicSearchPopupProps = {
+//   theme: Theme;
+//   addAudioElement: (src: string, title?: string, artist?: string) => void;
+// };
+
+// const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
+//   theme,
+//   addAudioElement,
+// }) => {
+//   const [open, setOpen] = React.useState(false);
+//   const [source, setSource] = React.useState<"youtube" | "spotify">("youtube");
+//   const [query, setQuery] = React.useState("");
+//   const [loading, setLoading] = React.useState(false);
+//   const [error, setError] = React.useState<string | null>(null);
+//   const [results, setResults] = React.useState<
+//     Array<{
+//       id: string;
+//       title: string;
+//       artist?: string;
+//       duration: string;
+//       thumbnail?: string;
+//       src: string;
+//     }>
+//   >([]);
+//   const [previewId, setPreviewId] = React.useState<string | null>(null);
+//   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+//   // Small built-in audio (mock preview) - short beep WAV
+//   const MOCK_AUDIO_SRC =
+//     "data:audio/wav;base64,UklGRmQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA//8AAP//AAD//wAA//8AAP//AAD//wAA"; // ultra-short placeholder tone
+
+//   const openPopup = () => setOpen(true);
+//   const closePopup = () => {
+//     setOpen(false);
+//     setPreviewId(null);
+//   };
+
+//   const doSearch = () => {
+//     setLoading(true);
+//     setError(null);
+//     // Simulate async search with mock data
+//     window.setTimeout(() => {
+//       // Create 5 mock tracks using the current query + source
+//       const base =
+//         query.trim() || (source === "spotify" ? "Lo-fi Focus" : "Chill Beats");
+//       const mock = Array.from({ length: 5 }).map((_, i) => ({
+//         id: `${source}-${Date.now()}-${i}`,
+//         title: `${base} #${i + 1}`,
+//         artist: source === "spotify" ? "Mock Artist" : "Mock Channel",
+//         duration: ["2:03", "3:12", "1:47", "2:56", "4:05"][i % 5],
+//         thumbnail:
+//           "data:image/svg+xml;utf8," +
+//           encodeURIComponent(
+//             `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='80'><rect width='120' height='80' fill='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%236b7280'>${source.toUpperCase()}</text></svg>`
+//           ),
+//         src: MOCK_AUDIO_SRC,
+//       }));
+//       setResults(mock);
+//       setLoading(false);
+//     }, 600);
+//   };
+
+//   const handlePreview = (id: string, src: string) => {
+//     try {
+//       // stop others
+//       const prevTags = document.querySelectorAll(
+//         "audio[data-music-preview='1']"
+//       );
+//       prevTags.forEach((a) => (a as HTMLAudioElement).pause());
+//       setPreviewId((cur) => (cur === id ? null : id));
+//       // play this one if toggled on
+//       window.setTimeout(() => {
+//         const tag = document.getElementById(
+//           `music-preview-${id}`
+//         ) as HTMLAudioElement | null;
+//         if (tag) {
+//           if (previewId === id) {
+//             tag.pause();
+//           } else {
+//             tag.currentTime = 0;
+//             tag.play().catch(() => void 0);
+//           }
+//         }
+//       }, 0);
+//     } catch {
+//       // ignore
+//     }
+//   };
+
+//   const handleAddToCanvas = (item: {
+//     src: string;
+//     title: string;
+//     artist?: string;
+//   }) => {
+//     addAudioElement(item.src, item.title, item.artist);
+//   };
+
+//   const triggerFilePicker = () => fileInputRef.current?.click();
+
+//   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = e.target.files?.[0];
+//     if (!file) return;
+//     const url = URL.createObjectURL(file);
+//     addAudioElement(url, file.name);
+//     // Reset input value so same file can be picked again
+//     e.target.value = "";
+//     setOpen(false);
+//   };
+
+//   // --- Recording via MediaRecorder (mock-friendly; will no-op if unavailable) ---
+//   const [recording, setRecording] = React.useState(false);
+//   const [recURL, setRecURL] = React.useState<string | null>(null);
+//   const mediaStreamRef = React.useRef<MediaStream | null>(null);
+//   const recorderRef = React.useRef<MediaRecorder | null>(null);
+//   const chunksRef = React.useRef<BlobPart[]>([]);
+
+//   const startRecording = async () => {
+//     try {
+//       setError(null);
+//       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+//       mediaStreamRef.current = stream;
+//       const rec = new MediaRecorder(stream);
+//       recorderRef.current = rec;
+//       chunksRef.current = [];
+//       rec.ondataavailable = (e) => {
+//         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+//       };
+//       rec.onstop = () => {
+//         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+//         const url = URL.createObjectURL(blob);
+//         setRecURL(url);
+//       };
+//       rec.start();
+//       setRecording(true);
+//     } catch (err) {
+//       setError("Microphone permission denied");
+//     }
+//   };
+
+//   const stopRecording = () => {
+//     recorderRef.current?.stop();
+//     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+//     setRecording(false);
+//   };
+
+//   const addRecording = () => {
+//     if (!recURL) return;
+//     addAudioElement(recURL, "Recording");
+//     setRecURL(null);
+//     setOpen(false);
+//   };
+
+//   // Button/icon trigger (theme-aware styles; using a simple note glyph for universal compatibility)
+//   const TriggerButton = (
+//     <button
+//       className={clsx(buttonClass(theme), hoverFX(theme))}
+//       aria-label="Music"
+//       title="Music"
+//       type="button"
+//     >
+//       {/* Using a simple glyph to avoid introducing new icon imports */}
+//       <span aria-hidden="true" style={{ fontSize: 16 }}>
+//         ♪
+//       </span>
+//     </button>
+//   );
+
+//   return (
+//     <Popup
+//       trigger={TriggerButton}
+//       position="bottom center"
+//       closeOnDocumentClick
+//       arrow={false}
+//       contentStyle={{ padding: 0, border: "none", background: "transparent" }}
+//       open={open}
+//       onOpen={openPopup}
+//       onClose={closePopup}
+//       modal
+      
+//     >
+//       <div
+//         className={clsx("flex flex-col rounded-t-2xl", panelThemeClass(theme))}
+//         style={{
+//           minWidth: 480,
+//           maxWidth: 640,
+//           borderRadius: "1rem 1rem 0 0",
+//           boxShadow: "0 -4px 24px rgba(0,0,0,0.10)",
+//         }}
+//       >
+//         {/* Header Row */}
+//         <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-black/10">
+//           {/* Left: Source + Search */}
+//           <div className="flex items-center gap-2 flex-1">
+//             <div className="inline-flex rounded overflow-hidden border border-black/10">
+//               <button
+//                 type="button"
+//                 className={clsx(
+//                   "px-3 py-1.5 text-sm",
+//                   source === "youtube" ? "bg-white/80" : "bg-transparent"
+//                 )}
+//                 onClick={() => setSource("youtube")}
+//                 aria-pressed={source === "youtube"}
+//               >
+//                 YouTube
+//               </button>
+//               <button
+//                 type="button"
+//                 className={clsx(
+//                   "px-3 py-1.5 text-sm",
+//                   source === "spotify" ? "bg-white/80" : "bg-transparent"
+//                 )}
+//                 onClick={() => setSource("spotify")}
+//                 aria-pressed={source === "spotify"}
+//               >
+//                 Spotify
+//               </button>
+//             </div>
+
+//             <input
+//               type="text"
+//               value={query}
+//               onChange={(e) => setQuery(e.target.value)}
+//               placeholder={
+//                 source === "spotify"
+//                   ? "Search tracks or artists"
+//                   : "Search videos"
+//               }
+//               className="flex-1 px-3 py-2 text-sm rounded border border-black/10 bg-white/80 outline-none"
+//               aria-label="Search"
+//               onKeyDown={(e) => {
+//                 if (e.key === "Enter") doSearch();
+//               }}
+//             />
+//             <button
+//               type="button"
+//               onClick={doSearch}
+//               className="px-3 py-2 text-sm rounded bg-blue-500 text-white hover:bg-blue-600"
+//               aria-label="Search"
+//             >
+//               Search
+//             </button>
+//           </div>
+
+//           {/* Right: Upload + Record */}
+//           <div className="flex items-center gap-2">
+//             <button
+//               type="button"
+//               onClick={triggerFilePicker}
+//               className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
+//               aria-label="Upload audio"
+//             >
+//               Upload
+//             </button>
+//             <input
+//               ref={fileInputRef}
+//               type="file"
+//               accept="audio/*"
+//               className="hidden"
+//               onChange={onFileChange}
+//             />
+
+//             {!recording ? (
+//               <button
+//                 type="button"
+//                 onClick={startRecording}
+//                 className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
+//                 aria-label="Start recording"
+//               >
+//                 Record
+//               </button>
+//             ) : (
+//               <button
+//                 type="button"
+//                 onClick={stopRecording}
+//                 className="px-3 py-2 text-sm rounded bg-red-500 text-white hover:bg-red-600"
+//                 aria-label="Stop recording"
+//               >
+//                 Stop
+//               </button>
+//             )}
+//           </div>
+//         </div>
+
+//         {/* Body */}
+//         <div className="px-5 py-4">
+//           {error && (
+//             <div className="mb-3 text-sm text-red-600" role="alert">
+//               {error}
+//             </div>
+//           )}
+
+//           {recording && (
+//             <div className="mb-4 text-sm">
+//               Recording... speak now. Click Stop to finish.
+//             </div>
+//           )}
+//           {recURL && (
+//             <div className="mb-4 flex items-center gap-2">
+//               <audio controls src={recURL} className="h-8" />
+//               <button
+//                 type="button"
+//                 onClick={addRecording}
+//                 className="px-3 py-1.5 text-sm rounded bg-green-500 text-white hover:bg-green-600"
+//               >
+//                 Add to Canvas
+//               </button>
+//             </div>
+//           )}
+
+//           {loading ? (
+//             <div className="grid gap-2">
+//               {Array.from({ length: 5 }).map((_, i) => (
+//                 <div
+//                   key={i}
+//                   className="h-14 rounded bg-gray-200 animate-pulse"
+//                 />
+//               ))}
+//             </div>
+//           ) : results.length === 0 ? (
+//             <div className="text-sm text-gray-500">
+//               Start by searching for music or upload/record your own.
+//             </div>
+//           ) : (
+//             <ul className="divide-y divide-black/10">
+//               {results.map((item) => (
+//                 <li key={item.id} className="flex items-center gap-3 py-2">
+//                   <img
+//                     src={item.thumbnail}
+//                     alt=""
+//                     className="w-16 h-10 rounded object-cover bg-gray-200"
+//                     draggable={false}
+//                   />
+//                   <div className="flex-1 min-w-0">
+//                     <div className="text-sm font-medium truncate">
+//                       {item.title}
+//                     </div>
+//                     <div className="text-xs text-gray-500 truncate">
+//                       {item.artist} • {item.duration}
+//                     </div>
+//                   </div>
+//                   <div className="flex items-center gap-2">
+//                     <button
+//                       type="button"
+//                       onClick={() => handlePreview(item.id, item.src)}
+//                       className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200"
+//                       aria-label="Preview"
+//                       title="Preview"
+//                     >
+//                       {previewId === item.id ? "Pause" : "Preview"}
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => handleAddToCanvas(item)}
+//                       className="px-2 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600"
+//                       aria-label="Add to Canvas"
+//                       title="Add to Canvas"
+//                     >
+//                       Add
+//                     </button>
+//                   </div>
+//                   {/* Hidden preview audio tag */}
+//                   <audio
+//                     id={`music-preview-${item.id}`}
+//                     data-music-preview="1"
+//                     src={item.src}
+//                     style={{ display: "none" }}
+//                     onEnded={() => setPreviewId(null)}
+//                   />
+//                 </li>
+//               ))}
+//             </ul>
+//           )}
+//         </div>
+
+//         {/* Footer */}
+//         <div className="flex items-center justify-end gap-2 px-5 pb-4">
+//           <button
+//             type="button"
+//             onClick={closePopup}
+//             className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
+//           >
+//             Close
+//           </button>
+//         </div>
+//       </div>
+//     </Popup>
+//   );
+// };

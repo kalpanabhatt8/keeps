@@ -39,7 +39,6 @@ const CanvasPage = () => {
   const router = useRouter();
   const bookId = params?.id ?? "blank";
 
-
   const template = useMemo(() => {
     if (bookId === "blank") return null;
     return getTemplateById(bookId);
@@ -171,22 +170,28 @@ const CanvasPage = () => {
           </Popup> */}
 
           <Popup
-           trigger={({ open }: { open: boolean }) => (
+            trigger={(open: boolean) => (
               <button
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={open}
-                className={`pointer-events-auto flex items-center gap-0.5 text-sm transition p-2 rounded-md hover:text-ink focus:text-primary focus:bg-surface-base ${open ? "bg-surface-base text-ink" : "text-ink-soft"}`}
+                className={`pointer-events-auto flex items-center gap-0.5 text-sm transition p-2 rounded-md hover:text-ink focus:text-primary focus:bg-surface-base ${
+                  open ? "bg-surface-base text-ink" : "text-ink-soft"
+                }`}
               >
                 <Sparkle
                   strokeWidth={1.5}
                   size={18}
-                  className={`${open ? "opacity-100" : "opacity-90"} transition-opacity`}
+                  className={`${
+                    open ? "opacity-100" : "opacity-90"
+                  } transition-opacity`}
                 />
                 <ChevronDown
                   strokeWidth={1}
                   size={16}
-                  className={`${open ? "rotate-180" : ""} transition-transform duration-200`}
+                  className={`${
+                    open ? "rotate-180" : ""
+                  } transition-transform duration-200`}
                 />
               </button>
             )}
@@ -205,32 +210,34 @@ const CanvasPage = () => {
             }}
             overlayStyle={{ background: "none" }}
           >
-            {((close: () => void) => (
-              <div className="pointer-events-auto w-56 rounded-xl bg-white shadow-xl ring-1 ring-black/5 backdrop-blur-md p-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    router.push("/dashboard");
-                    close();
-                  }}
-                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition hover:bg-primary hover:text-white"
-                >
-                  <ChevronLeft strokeWidth={1.5} size={18} />
-                  Back to Dashboard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    console.log("Edit cover page clicked");
-                    close();
-                  }}
-                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition hover:bg-primary hover:text-white"
-                >
-                  <FilePenLine strokeWidth={1.5} size={16} />
-                  Edit Cover Page
-                </button>
-              </div>
-            )) as unknown as React.ReactNode}
+            {
+              ((close: () => void) => (
+                <div className="pointer-events-auto w-56 rounded-xl bg-white shadow-xl ring-1 ring-black/5 backdrop-blur-md p-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      router.push("/dashboard");
+                      close();
+                    }}
+                    className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition hover:bg-primary hover:text-white"
+                  >
+                    <ChevronLeft strokeWidth={1.5} size={18} />
+                    Back to Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log("Edit cover page clicked");
+                      close();
+                    }}
+                    className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition hover:bg-primary hover:text-white"
+                  >
+                    <FilePenLine strokeWidth={1.5} size={16} />
+                    Edit Cover Page
+                  </button>
+                </div>
+              )) as unknown as React.ReactNode
+            }
           </Popup>
 
           {/* <span className="h-4 w-px bg-border-subtle" aria-hidden /> */}
