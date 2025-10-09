@@ -3100,6 +3100,29 @@ const toolbarButtons = [
       />
     </div>
   )}
+
+{/* {globalAudio && (
+  <div className="fixed bottom-4 left-4 z-50 w-72 bg-white rounded shadow-lg overflow-hidden">
+    <div className="flex items-center p-2 gap-2">
+      <img src={globalAudio.thumbnail} alt="" className="w-10 h-10 rounded" />
+      <div className="flex-1 truncate">
+        <div className="font-semibold text-sm">{globalAudio.title}</div>
+        <div className="text-xs opacity-70">{globalAudio.channelTitle}</div>
+      </div>
+      <button
+        className="text-red-500 text-xs px-2"
+        onClick={() => setGlobalAudio(null)}
+      >
+        ✖
+      </button>
+    </div>
+    <iframe
+      src={`https://www.youtube.com/embed/${globalAudio.videoId}?autoplay=1&enablejsapi=1`}
+      allow="autoplay; encrypted-media"
+      className="w-full h-40"
+    />
+  </div>
+)} */}
     </div>
   );
 };
