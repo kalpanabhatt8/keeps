@@ -196,357 +196,450 @@ const stickerIconByTheme: Record<
 };
 
 import React, { useEffect } from "react";
-// --- Minimal MusicSearchPopup ---
 import { LucideSearch, LucidePlay } from "lucide-react";
-
-// Example playlists and songs (10–20 total, grouped by a few categories)
-const musicCategories = [
-  {
-    name: "Chill Beats",
-    tracks: [
-      {
-        title: "Lofi Vibes",
-        src: "https://cdn.pixabay.com/audio/2022/10/16/audio_12c6f8.mp3",
-      },
-      {
-        title: "Evening Walk",
-        src: "https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b.mp3",
-      },
-      {
-        title: "Calm Rain",
-        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b4e.mp3",
-      },
-    ],
-  },
-  {
-    name: "Upbeat",
-    tracks: [
-      {
-        title: "Fun Times",
-        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b0f.mp3",
-      },
-      {
-        title: "Sunny Day",
-        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b2b.mp3",
-      },
-      {
-        title: "Jumpstart",
-        src: "https://cdn.pixabay.com/audio/2022/10/16/audio_12c6f4.mp3",
-      },
-    ],
-  },
-  {
-    name: "Relaxation",
-    tracks: [
-      {
-        title: "Gentle Stream",
-        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b19.mp3",
-      },
-      {
-        title: "Peaceful Night",
-        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b3c.mp3",
-      },
-      {
-        title: "Dreamscape",
-        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b5d.mp3",
-      },
-    ],
-  },
-  {
-    name: "Anime Inspired",
-    tracks: [
-      {
-        title: "Sakura Wind",
-        src: "https://cdn.pixabay.com/audio/2022/07/26/audio_124b4e.mp3",
-      },
-      {
-        title: "Pixel Adventure",
-        src: "https://cdn.pixabay.com/audio/2022/10/16/audio_12c6f7.mp3",
-      },
-    ],
-  },
-];
-
-const allTracks = musicCategories.flatMap((cat) => cat.tracks);
 
 type MusicSearchPopupProps = {
   theme: Theme;
-  addAudioElement: (src: string, title?: string) => void;
+  addAudioElement: (src: string, title?: string) => void; // not used anymore, but keep for prop compatibility
+  setGlobalAudio: React.Dispatch<
+    React.SetStateAction<
+      {
+        videoId: string;
+        title: string;
+        thumbnail?: string;
+        channelTitle?: string;
+        artist?: string;
+      } | null
+    >
+  >;
 };
 
 const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
   theme,
   addAudioElement,
+  setGlobalAudio,
 }) => {
   const [open, setOpen] = React.useState(false);
-  const [searchOpen, setSearchOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
-  const [currentTrack, setCurrentTrack] = React.useState<null | {
-    src: string;
-    title: string;
-  }>(null);
-  const [playing, setPlaying] = React.useState(false);
-  const audioRef = React.useRef<HTMLAudioElement>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [results, setResults] = React.useState<
+    Array<{
+      videoId: string;
+      title: string;
+      thumbnail: string;
+      channelTitle: string;
+    }>
+  >([]);
+  const [error, setError] = React.useState<string | null>(null);
+  // NEW: Local popup audio cards
+  const [popupAudios, setPopupAudios] = React.useState<
+    Array<{ videoId: string; title: string; thumbnail: string; channelTitle: string }>
+  >([]);
 
-  // Play/pause logic: only one audio at a time
-  React.useEffect(() => {
-    if (audioRef.current) {
-      if (playing) {
-        audioRef.current.play();
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [playing, currentTrack]);
-
-  // Filtered tracks for search
-  const filteredTracks = search
-    ? allTracks.filter((t) =>
-        t.title.toLowerCase().includes(search.toLowerCase())
-      )
-    : allTracks;
-
-  // Minimal panel theme styling
+  // Styling for popup content
   const contentStyle = {
-    width: 260,
+    width: 320,
     padding: "0.5rem",
     borderRadius: "0.75rem",
     boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
     background: undefined as string | undefined,
   };
-  // Set theme bg color
   if (theme === "neutral") contentStyle.background = "#fff";
   else if (theme === "kawaii") contentStyle.background = "#ffe4ef";
   else if (theme === "retro") contentStyle.background = "#fef7d5";
   else if (theme === "anime") contentStyle.background = "#ede9fe";
 
-  // Play a track
-  const handlePlay = (track: { src: string; title: string }) => {
-    setCurrentTrack(track);
-    setPlaying(true);
-  };
-  // Pause
-  const handlePause = () => setPlaying(false);
-  // Add to canvas as audio element
-  const handleAddToCanvas = () => {
-    if (currentTrack) {
-      addAudioElement(currentTrack.src, currentTrack.title);
+  // Fetch from YouTube Data API
+  const doSearch = async (query: string) => {
+    setLoading(true);
+    setError(null);
+    setResults([]);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_YT_API_KEY;
+      if (!apiKey) {
+        setError("Missing YouTube API key.");
+        setLoading(false);
+        return;
+      }
+      // videoCategoryId=10 (Music), type=video, maxResults=15, safeSearch=strict
+      const url =
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&videoCategoryId=10&q=${encodeURIComponent(
+          query
+        )}&key=${apiKey}&safeSearch=strict`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        let msg = "Failed to fetch from YouTube.";
+        try {
+          const errData = await res.json();
+          if (errData?.error?.message) msg = errData.error.message;
+        } catch {}
+        setError(msg);
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      if (!data.items) {
+        setError("No results found.");
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+      const items = data.items.map((item: any) => ({
+        videoId: item.id.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || "",
+        channelTitle: item.snippet.channelTitle,
+      }));
+      setResults(items);
+      setLoading(false);
+    } catch (e: any) {
+      setError(e?.message || "Error fetching from YouTube.");
+      setLoading(false);
     }
   };
 
-  // Show minimal view or search view
+  // Handle Enter key to search
+  const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && search.trim().length > 0) {
+      doSearch(search.trim());
+    }
+  };
+
+  // Theme styles for button
+  const addBtnClass = (theme: Theme) =>
+    clsx(
+      "rounded px-2 py-1 text-xs font-semibold ml-2 transition",
+      theme === "kawaii"
+        ? "bg-pink-200 text-pink-800 hover:bg-pink-300"
+        : theme === "retro"
+        ? "bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
+        : theme === "anime"
+        ? "bg-purple-200 text-purple-800 hover:bg-purple-300"
+        : "bg-gray-200 text-black hover:bg-gray-300"
+    );
+
+  // Theme styles for embedded audio card
+  const cardStyle = {
+    background:
+      theme === "kawaii"
+        ? "#ffe4ef"
+        : theme === "retro"
+        ? "#fef7d5"
+        : theme === "anime"
+        ? "#ede9fe"
+        : "#f9fafb",
+    borderRadius: 10,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+    border: "1px solid #eee",
+    marginBottom: 8,
+    padding: 0,
+    overflow: "hidden",
+  } as React.CSSProperties;
+
   return (
-    <Popup
-      trigger={
-        <button
-          aria-label="Music"
-          className={clsx(
-            buttonClass(theme),
-            hoverFX(theme),
-            "ml-2"
-          )}
-          type="button"
-        >
-          <LucideMusic size={18} />
-        </button>
-      }
-      position="bottom right"
-      closeOnDocumentClick
-      arrow={false}
-      contentStyle={contentStyle}
-      open={open}
-      onOpen={() => {
-        setOpen(true);
-        setSearchOpen(false);
-        setSearch("");
-      }}
-      onClose={() => setOpen(false)}
-    >
+    <>
+      <Popup
+        trigger={
+          <button
+            aria-label="Music"
+            className={clsx(
+              buttonClass(theme),
+              hoverFX(theme),
+              "ml-2"
+            )}
+            type="button"
+          >
+            <LucideMusic size={18} />
+          </button>
+        }
+        position="bottom right"
+        arrow={false}
+        contentStyle={contentStyle}
+        open={open}
+        onOpen={() => {
+          setOpen(true);
+          setSearch("");
+          setResults([]);
+          setError(null);
+          setLoading(false);
+          setPopupAudios([]); // Optionally clear on open
+        }}
+        onClose={() => setOpen(false)}
+      >
       <div
         className={clsx(
           "flex flex-col gap-2",
           panelThemeClass(theme)
         )}
-        style={{ minHeight: 120 }}
       >
-        {/* Header row: no title, just search icon right */}
-        <div className="flex items-center justify-between mb-1">
-          <div />
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            type="text"
+            autoFocus
+            placeholder="Search YouTube music…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={handleSearchInputKeyDown}
+            className={clsx(
+              "rounded px-3 py-1 w-full border focus:outline-none",
+              theme === "kawaii"
+                ? "border-pink-300 bg-pink-50"
+                : theme === "retro"
+                ? "border-yellow-300 bg-yellow-50"
+                : theme === "anime"
+                ? "border-purple-300 bg-purple-50"
+                : "border-gray-200 bg-white"
+            )}
+            style={{ fontSize: 15 }}
+          />
           <button
             type="button"
-            aria-label="Search music"
+            aria-label="Search"
             className={clsx(
-              "rounded-full p-2 hover:bg-gray-100",
+              "rounded-full p-2",
               theme === "kawaii" && "hover:bg-pink-200",
               theme === "retro" && "hover:bg-yellow-200",
               theme === "anime" && "hover:bg-purple-200"
             )}
-            style={{ marginLeft: "auto" }}
-            onClick={() => setSearchOpen((v) => !v)}
+            disabled={loading || search.trim().length === 0}
+            onClick={() => search.trim().length > 0 && doSearch(search.trim())}
+            style={{ minWidth: 36 }}
           >
             <LucideSearch size={16} />
           </button>
         </div>
-        {/* Main content */}
-        {!searchOpen ? (
-          // Minimal view: show categories and short list
-          <div className="flex flex-col gap-2">
-            {musicCategories.map((cat) => (
-              <div key={cat.name} className="mb-1">
-                <div className="text-xs font-bold opacity-60 mb-1 ml-1">{cat.name}</div>
-                <ul className="flex flex-col gap-1">
-                  {cat.tracks.map((track) => (
+        <div className="flex flex-col gap-2">
+          {loading && (
+            <div className="text-xs text-center opacity-70 py-3">Searching…</div>
+          )}
+          {error && (
+            <div className="text-xs text-center text-red-500 py-2">{error}</div>
+          )}
+          {/* Default curated songs if no search results */}
+          {!loading && !error && results.length === 0 && (() => {
+            // Hardcoded curated tracks
+            const defaultSongs = [
+              {
+                videoId: "jfKfPfyJRdk",
+                title: "lofi hip hop radio - beats to relax/study to",
+                channelTitle: "Lofi Girl",
+                thumbnail: "https://i.ytimg.com/vi/jfKfPfyJRdk/mqdefault.jpg",
+              },
+              {
+                videoId: "DWcJFNfaw9c",
+                title: "Chillhop Radio - jazzy & lofi hip hop beats",
+                channelTitle: "Chillhop Music",
+                thumbnail: "https://i.ytimg.com/vi/DWcJFNfaw9c/mqdefault.jpg",
+              },
+              {
+                videoId: "7NOSDKb0HlU",
+                title: "lofi beats to study/relax to",
+                channelTitle: "ChilledCow",
+                thumbnail: "https://i.ytimg.com/vi/7NOSDKb0HlU/mqdefault.jpg",
+              },
+              {
+                videoId: "n61ULEU7CO0",
+                title: "Best of Lofi Hip Hop 2021",
+                channelTitle: "Lofi Girl",
+                thumbnail: "https://i.ytimg.com/vi/n61ULEU7CO0/mqdefault.jpg",
+              },
+              {
+                videoId: "pVXKoic5vL0",
+                title: "Lost in Midnight Glow",
+                channelTitle: "Dreamy Lofi",
+                thumbnail: "https://i.ytimg.com/vi/pVXKoic5vL0/mqdefault.jpg",
+              },
+              {
+                videoId: "qSqqvhjNet4",
+                title: "Romantic Lofi Mashup",
+                channelTitle: "Lofi Mashups",
+                thumbnail: "https://i.ytimg.com/vi/qSqqvhjNet4/mqdefault.jpg",
+              },
+            ];
+            return (
+              <div>
+                <div className="text-xs text-center opacity-60 py-2">
+                  Try these curated lofi & chill tracks!
+                </div>
+                <ul className="w-full flex flex-col gap-1 max-h-64 overflow-y-auto">
+                  {defaultSongs.map((item) => (
                     <li
-                      key={track.title}
-                      className="flex items-center justify-between px-2 py-1 rounded hover:bg-gray-100"
-                      style={
-                        theme === "kawaii"
-                          ? { background: undefined }
-                          : theme === "retro"
-                          ? { background: undefined }
-                          : theme === "anime"
-                          ? { background: undefined }
-                          : undefined
-                      }
-                    >
-                      <span className="truncate text-sm">{track.title}</span>
-                      <button
-                        aria-label={
-                          currentTrack && currentTrack.src === track.src && playing
-                            ? "Pause"
-                            : "Play"
-                        }
-                        className={clsx(
-                          "rounded-full p-1 ml-2",
-                          theme === "kawaii" && "hover:bg-pink-200",
-                          theme === "retro" && "hover:bg-yellow-200",
-                          theme === "anime" && "hover:bg-purple-200"
-                        )}
-                        onClick={() =>
-                          currentTrack && currentTrack.src === track.src && playing
-                            ? handlePause()
-                            : handlePlay(track)
-                        }
-                        style={{ fontSize: 16, minWidth: 32 }}
-                        type="button"
-                      >
-                        {currentTrack && currentTrack.src === track.src && playing
-                          ? "⏸"
-                          : <LucidePlay size={16} />}
-                      </button>
-                      {/* Add to canvas button, only if playing this track */}
-                      {currentTrack && currentTrack.src === track.src && playing && (
-                        <button
-                          className={clsx(
-                            "rounded px-2 py-0.5 text-xs ml-2",
-                            theme === "kawaii"
-                              ? "bg-pink-200 text-pink-800"
-                              : theme === "retro"
-                              ? "bg-yellow-200 text-yellow-800"
-                              : theme === "anime"
-                              ? "bg-purple-200 text-purple-800"
-                              : "bg-gray-200 text-black"
-                          )}
-                          onClick={handleAddToCanvas}
-                          type="button"
-                        >
-                          Add to Canvas
-                        </button>
+                      key={item.videoId}
+                      className={clsx(
+                        "flex items-center px-2 py-2 rounded hover:bg-gray-100",
+                        theme === "kawaii" && "hover:bg-pink-100",
+                        theme === "retro" && "hover:bg-yellow-100",
+                        theme === "anime" && "hover:bg-purple-100"
                       )}
+                      style={{ minHeight: 54 }}
+                    >
+                      <img
+                        src={item.thumbnail}
+                        alt=""
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 6,
+                          objectFit: "cover",
+                          marginRight: 10,
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.09)",
+                          background: "#fff",
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="truncate font-semibold"
+                          style={{
+                            fontSize: 15,
+                            color:
+                              theme === "kawaii"
+                                ? "#be185d"
+                                : theme === "retro"
+                                ? "#92400e"
+                                : theme === "anime"
+                                ? "#6d28d9"
+                                : "#222",
+                          }}
+                        >
+                          {item.title}
+                        </div>
+                        <div
+                          className="truncate text-xs opacity-70"
+                          style={{
+                            color:
+                              theme === "kawaii"
+                                ? "#be185d"
+                                : theme === "retro"
+                                ? "#92400e"
+                                : theme === "anime"
+                                ? "#6d28d9"
+                                : "#555",
+                          }}
+                        >
+                          {item.channelTitle}
+                        </div>
+                      </div>
+                      <button
+                        className={addBtnClass(theme)}
+                        title="Add this song to your popup playlist"
+                        type="button"
+                        onClick={() => {
+                          setPopupAudios((prev) =>
+                            prev.some((aud) => aud.videoId === item.videoId)
+                              ? prev
+                              : [...prev, item]
+                          );
+                        }}
+                      >
+                        Add
+                      </button>
+                      <button
+                        className={addBtnClass(theme)}
+                        title="Play this song"
+                        type="button"
+                        onClick={() => {
+                          setGlobalAudio({
+                            videoId: item.videoId,
+                            title: item.title,
+                            thumbnail: item.thumbnail,
+                            channelTitle: item.channelTitle,
+                          });
+                        }}
+                        style={{ marginLeft: 8 }}
+                      >
+                        ▶ Play
+                      </button>
                     </li>
                   ))}
                 </ul>
               </div>
-            ))}
-          </div>
-        ) : (
-          // Search view: input + full song list
-          <div className="flex flex-col gap-2 items-center">
-            <input
-              type="text"
-              autoFocus
-              placeholder="Search music..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className={clsx(
-                "rounded px-3 py-1 w-full mb-2 border",
-                theme === "kawaii"
-                  ? "border-pink-300 bg-pink-50"
-                  : theme === "retro"
-                  ? "border-yellow-300 bg-yellow-50"
-                  : theme === "anime"
-                  ? "border-purple-300 bg-purple-50"
-                  : "border-gray-200 bg-white"
-              )}
-              style={{ fontSize: 15, textAlign: "center" }}
-            />
-            <ul className="w-full flex flex-col gap-1">
-              {filteredTracks.length === 0 && (
-                <li className="text-xs text-center opacity-60 py-2">No results.</li>
-              )}
-              {filteredTracks.map((track) => (
+            );
+          })()}
+          {!loading && results.length > 0 && (
+            <ul className="w-full flex flex-col gap-1 max-h-64 overflow-y-auto">
+              {results.map((item) => (
                 <li
-                  key={track.title}
-                  className="flex items-center justify-between px-2 py-1 rounded hover:bg-gray-100"
-                >
-                  <span className="truncate text-sm">{track.title}</span>
-                  <button
-                    aria-label={
-                      currentTrack && currentTrack.src === track.src && playing
-                        ? "Pause"
-                        : "Play"
-                    }
-                    className={clsx(
-                      "rounded-full p-1 ml-2",
-                      theme === "kawaii" && "hover:bg-pink-200",
-                      theme === "retro" && "hover:bg-yellow-200",
-                      theme === "anime" && "hover:bg-purple-200"
-                    )}
-                    onClick={() =>
-                      currentTrack && currentTrack.src === track.src && playing
-                        ? handlePause()
-                        : handlePlay(track)
-                    }
-                    style={{ fontSize: 16, minWidth: 32 }}
-                    type="button"
-                  >
-                    {currentTrack && currentTrack.src === track.src && playing
-                      ? "⏸"
-                      : <LucidePlay size={16} />}
-                  </button>
-                  {/* Add to canvas button, only if playing this track */}
-                  {currentTrack && currentTrack.src === track.src && playing && (
-                    <button
-                      className={clsx(
-                        "rounded px-2 py-0.5 text-xs ml-2",
-                        theme === "kawaii"
-                          ? "bg-pink-200 text-pink-800"
-                          : theme === "retro"
-                          ? "bg-yellow-200 text-yellow-800"
-                          : theme === "anime"
-                          ? "bg-purple-200 text-purple-800"
-                          : "bg-gray-200 text-black"
-                      )}
-                      onClick={handleAddToCanvas}
-                      type="button"
-                    >
-                      Add to Canvas
-                    </button>
+                  key={item.videoId}
+                  className={clsx(
+                    "flex items-center px-2 py-2 rounded hover:bg-gray-100",
+                    theme === "kawaii" && "hover:bg-pink-100",
+                    theme === "retro" && "hover:bg-yellow-100",
+                    theme === "anime" && "hover:bg-purple-100"
                   )}
+                  style={{ minHeight: 54 }}
+                >
+                  <img
+                    src={item.thumbnail}
+                    alt=""
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 6,
+                      objectFit: "cover",
+                      marginRight: 10,
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.09)",
+                      background: "#fff",
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="truncate font-semibold"
+                      style={{
+                        fontSize: 15,
+                        color:
+                          theme === "kawaii"
+                            ? "#be185d"
+                            : theme === "retro"
+                            ? "#92400e"
+                            : theme === "anime"
+                            ? "#6d28d9"
+                            : "#222",
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                    <div
+                      className="truncate text-xs opacity-70"
+                      style={{
+                        color:
+                          theme === "kawaii"
+                            ? "#be185d"
+                            : theme === "retro"
+                            ? "#92400e"
+                            : theme === "anime"
+                            ? "#6d28d9"
+                            : "#555",
+                      }}
+                    >
+                      {item.channelTitle}
+                    </div>
+                  </div>
+                  <button
+                    className={addBtnClass(theme)}
+                    title="Play this song"
+                    type="button"
+                    onClick={() => {
+                      setGlobalAudio({
+                        videoId: item.videoId,
+                        title: item.title,
+                        thumbnail: item.thumbnail,
+                        channelTitle: item.channelTitle,
+                      });
+                    }}
+                  >
+                    ▶ Play
+                  </button>
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-        {/* Persistent audio player (hidden) */}
-        <audio
-          ref={audioRef}
-          src={currentTrack?.src}
-          style={{ display: "none" }}
-          onEnded={() => setPlaying(false)}
-        />
+          )}
+        </div>
+        <div className="text-xs text-center opacity-60 mt-2">
+          Powered by YouTube
+        </div>
       </div>
-    </Popup>
+      </Popup>
+    </>
   );
 };
 import dynamic from "next/dynamic";
@@ -1168,6 +1261,8 @@ const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
 };
 
 const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
+  // --- Global floating audio player state ---
+  const [globalAudio, setGlobalAudio] = React.useState<{ videoId: string; title: string; thumbnail?: string; channelTitle?: string; artist?: string } | null>(null);
   const [theme, setTheme] = React.useState<Theme>("neutral");
   const [background, setBackground] = React.useState<{
     color?: string;
@@ -1810,6 +1905,25 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
     }
   }, [storageKey]);
 
+  // Preload default YouTube tracks on mount if audioElements is empty
+  useEffect(() => {
+    if (audioElements.length === 0) {
+      const defaults = [
+        { videoId: "n61ULEU7CO0", title: "Best of Lofi Hip Hop 2021" },
+        { videoId: "qSqqvhjNet4", title: "Romantic Lofi Mashup" },
+        { videoId: "t8yVk0bm684", title: "1 Hour Hindi Lofi Songs" },
+        { videoId: "zzclUJ5oxns", title: "Bolero Lofi Classics" },
+        { videoId: "pVXKoic5vL0", title: "Lost in Midnight Glow" },
+      ];
+      defaults.forEach(({ videoId, title }) => {
+        const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0`;
+        addAudioElement(embedUrl, title);
+      });
+    }
+    // Only run on mount and when audioElements changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Handler to update properties of the selected text element
   const updateSelectedText = (updates: Partial<TextElement>) => {
     setTextElements((prev) =>
@@ -1904,7 +2018,7 @@ const toolbarButtons = [
       )}
       <div className="absolute top-4 right-4 flex gap-2">
         <ThemeSelector theme={theme} setTheme={setTheme} />
-        <MusicSearchPopup theme={theme} addAudioElement={addAudioElement} />
+        <MusicSearchPopup theme={theme} addAudioElement={addAudioElement} setGlobalAudio={setGlobalAudio} />
       </div>
       <p className="text-lg font-semibold">Canvas board reset</p>
       <p className="text-sm">
@@ -1916,108 +2030,7 @@ const toolbarButtons = [
         style={{ width: "100%", height: 400 }}
       >
         {/* Render audio elements */}
-        {audioElements
-          .slice()
-          .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
-          .map((el) => {
-            const isSelected = el.id === selectedAudioId;
-            return (
-              <div
-                key={el.id}
-                className={clsx(
-                  "absolute select-none transition group",
-                  isSelected ? "outline-2 outline-green-500 z-50" : "z-25"
-                )}
-                style={{
-                  left: el.x,
-                  top: el.y,
-                  minWidth: 180,
-                  minHeight: 64,
-                  maxWidth: 280,
-                  background: "#f0fdf4",
-                  borderRadius: 12,
-                  boxShadow: "0 2px 10px rgba(0,128,64,0.10)",
-                  border: isSelected
-                    ? "2px solid #22c55e"
-                    : "1.5px solid #a7f3d0",
-                  zIndex: el.zIndex ?? 25,
-                  cursor: "move",
-                  userSelect: "none",
-                  padding: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0,
-                }}
-                onMouseDown={(e) => handleAudioDragStart(e, el.id)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedAudioId(el.id);
-                  setSelectedTextId(null);
-                  setSelectedImageId(null);
-                  setSelectedStickyId(null);
-                  setSelectedStickerId(null);
-                }}
-              >
-                {/* Play/pause button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleAudioPlay(el.id);
-                  }}
-                  title={el.playing ? "Pause" : "Play"}
-                  className={clsx(
-                    "m-3 rounded-full w-10 h-10 flex items-center justify-center text-white",
-                    el.playing
-                      ? "bg-green-600"
-                      : "bg-green-400 hover:bg-green-500"
-                  )}
-                  style={{ flexShrink: 0, fontSize: 20 }}
-                  type="button"
-                >
-                  {el.playing ? "⏸" : "▶️"}
-                </button>
-                {/* Title/artist info */}
-                <div className="flex-1 py-2 pr-2 min-w-0">
-                  <div
-                    className="font-semibold text-green-900 truncate"
-                    style={{ fontSize: 15 }}
-                  >
-                    {el.title || "Audio"}
-                  </div>
-                  {el.artist && (
-                    <div className="text-green-700 text-xs truncate">
-                      {el.artist}
-                    </div>
-                  )}
-                </div>
-                {/* Delete button */}
-                <button
-                  className="rounded-full w-8 h-8 flex items-center justify-center text-green-700 hover:bg-green-100 m-2"
-                  title="Delete audio"
-                  type="button"
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    deleteAudioElementById(el.id);
-                  }}
-                >
-                  ✖
-                </button>
-                {/* Hidden audio tag */}
-                <audio
-                  id={`audio-${el.id}`}
-                  src={el.src}
-                  style={{ display: "none" }}
-                  onEnded={() => {
-                    setAudioElements((prev) =>
-                      prev.map((a) =>
-                        a.id === el.id ? { ...a, playing: false } : a
-                      )
-                    );
-                  }}
-                />
-              </div>
-            );
-          })}
+        {/* (Removed: audio <div> with <iframe> for YouTube. Audio is now only shown in popup playlist.) */}
         {/* Render sticky notes */}
         {stickyNotes.map((el) => {
           const isSelected = el.id === selectedStickyId;
@@ -3063,6 +3076,30 @@ const toolbarButtons = [
             </div>
           );
         })}
+      {/* Global floating audio player */}
+      {/* Floating global YouTube player */}
+  {globalAudio && (
+    <div className="fixed bottom-4 left-4 z-50 w-64 bg-white rounded shadow">
+      <div className="flex items-center p-2 gap-2">
+        <img src={globalAudio.thumbnail} className="w-10 h-10 rounded" />
+        <div className="flex-1 truncate text-sm">{globalAudio.title}</div>
+        <button
+          onClick={() => setGlobalAudio(null)}
+          className="ml-auto text-gray-500 hover:text-red-500 rounded p-1 transition"
+          aria-label="Close"
+          type="button"
+        >
+          ✖
+        </button>
+      </div>
+      <iframe
+        id="yt-player"
+        src={`https://www.youtube.com/embed/${globalAudio.videoId}?autoplay=1`}
+        allow="autoplay; encrypted-media"
+        className="hidden"
+      />
+    </div>
+  )}
     </div>
   );
 };
