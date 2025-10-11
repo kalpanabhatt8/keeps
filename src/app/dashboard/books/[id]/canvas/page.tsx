@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { getTemplateById } from "@/data/book-templates";
 import CanvasBoard, {
   type CanvasSnapshot,
@@ -59,25 +59,54 @@ const CanvasPage = () => {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const bookId = params?.id ?? "blank";
+  const searchParams = useSearchParams();
+  const templateParam = searchParams.get("template");
 
   const template = useMemo(() => {
-    if (bookId === "blank") return null;
-    return getTemplateById(bookId);
-  }, [bookId]);
+    if (!templateParam || templateParam === "blank") return null;
+    return getTemplateById(templateParam);
+  }, [templateParam]);
+
+  const templateSnapshot = useMemo<CanvasSnapshot | null>(() => {
+    if (!template) return null;
+    const snapshot = JSON.parse(
+      JSON.stringify(template.canvas)
+    ) as CanvasSnapshot;
+    snapshot.updatedAt = Date.now();
+    return snapshot;
+  }, [template]);
+
+  const templateBackgroundStyle = useMemo(
+    () =>
+      templateSnapshot
+        ? deriveBackgroundStyle(
+            templateSnapshot.background,
+            blankDefaults.background
+          )
+        : blankDefaults.background,
+    [templateSnapshot]
+  );
 
   const baseDraft = useMemo((): Draft => {
     return {
       id: bookId,
       title: template?.title ?? blankDefaults.title,
       subtitle: template?.subtitle ?? blankDefaults.subtitle,
-      coverImage: null,
-      background: blankDefaults.background,
+      coverImage: template?.coverImage ?? null,
+      background: templateBackgroundStyle,
       variant: template?.variant ?? blankDefaults.variant,
-      titleColor: null,
-      subtitleColor: null,
+      titleColor: template?.titleColor ?? null,
+      subtitleColor: template?.subtitleColor ?? null,
+      sourceTemplateId:
+        templateParam ?? (template ? template.id : blankDefaults.id),
       updatedAt: Date.now(),
     };
-  }, [bookId, template]);
+  }, [
+    bookId,
+    template,
+    templateBackgroundStyle,
+    templateParam,
+  ]);
 
   const [draft, setDraft] = useState<Draft>(baseDraft);
   const [lastSaved, setLastSaved] = useState<number>(baseDraft.updatedAt);
@@ -86,6 +115,11 @@ const CanvasPage = () => {
   const draftRef = React.useRef<Draft>(baseDraft);
   const pendingSnapshotRef = React.useRef<CanvasSnapshot | null>(null);
   const isDraftHydratedRef = React.useRef(false);
+  const editCover = useCallback(() => {
+    const templateKey =
+      draftRef.current?.sourceTemplateId ?? templateParam ?? "blank";
+    router.push(`/dashboard/books/${bookId}?template=${templateKey}`);
+  }, [bookId, router, templateParam]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -131,10 +165,16 @@ const CanvasPage = () => {
     (updates: Partial<Draft>, updatedAtOverride?: number) => {
       const updatedAt = updatedAtOverride ?? Date.now();
       const current = draftRef.current ?? baseDraft;
+      const resolvedTemplateId =
+        updates.sourceTemplateId ??
+        current.sourceTemplateId ??
+        templateParam ??
+        (template ? template.id : blankDefaults.id);
       const nextDraft: Draft = {
         ...current,
         ...updates,
         id: bookId,
+        sourceTemplateId: resolvedTemplateId,
         updatedAt,
       };
       draftRef.current = nextDraft;
@@ -144,6 +184,7 @@ const CanvasPage = () => {
         bookId,
         updatedAt,
         updates,
+        sourceTemplateId: resolvedTemplateId,
       });
 
       if (typeof window === "undefined") {
@@ -175,7 +216,7 @@ const CanvasPage = () => {
 
       return nextDraft;
     },
-    [baseDraft, bookId]
+    [baseDraft, bookId, template, templateParam]
   );
 
   const applySnapshotToDraft = useCallback(
@@ -255,6 +296,7 @@ const CanvasPage = () => {
         storageKey={boardStorageKey}
         initialBackground={draft.background}
         onSnapshotChange={handleSnapshotChange}
+        initialSnapshot={templateSnapshot}
       />
 
       <div className="pointer-events-none absolute left-4 top-4 z-40 flex items-center gap-3 bg-[var(---color-iconbutton)] text-[var(--color-icon)] p-1 rounded-lg">
@@ -367,7 +409,7 @@ const CanvasPage = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      console.log("Edit cover page clicked");
+                      editCover();
                       close();
                     }}
                     className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition hover:bg-primary hover:text-white"

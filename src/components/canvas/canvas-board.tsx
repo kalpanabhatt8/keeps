@@ -743,6 +743,7 @@ type CanvasBoardProps = {
   storageKey: string;
   initialBackground?: string;
   onSnapshotChange?: (snapshot: CanvasSnapshot) => void;
+  initialSnapshot?: CanvasSnapshot | null;
 };
 
 // Only unique, non-background, non-text icons for each theme:
@@ -1254,6 +1255,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
   storageKey,
   initialBackground,
   onSnapshotChange,
+  initialSnapshot,
 }) => {
   // --- Global floating audio player state ---
   const [globalAudio, setGlobalAudio] = React.useState<{
@@ -1268,6 +1270,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
     React.useState<CanvasBackgroundState>({});
   const [isHydrated, setIsHydrated] = React.useState(false);
   const snapshotComparableRef = React.useRef<string | null>(null);
+  const hydratedFromTemplateRef = React.useRef(false);
 
   // Text elements state
   const [textElements, setTextElements] = React.useState<TextElement[]>([]);
@@ -1900,6 +1903,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
   // Preload default YouTube tracks if canvas has none after hydration
   useEffect(() => {
     if (!isHydrated) return;
+    if (hydratedFromTemplateRef.current) return;
     if (injectedDefaultsRef.current) return;
     if (audioElements.length > 0) return;
 
@@ -1980,6 +1984,8 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
 
     console.debug("[CanvasBoard] Hydrating snapshot", { storageKey });
     let snapshotToEmit: CanvasSnapshot | null = null;
+    let hydratedFromTemplate = false;
+
     try {
       const raw = window.localStorage.getItem(storageKey);
       console.debug("[CanvasBoard] Loaded raw snapshot", {
@@ -2022,6 +2028,48 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
       console.error("Failed to restore canvas snapshot", error);
     }
 
+    if (!snapshotToEmit && initialSnapshot) {
+      try {
+        const snapshotClone = normalizeSnapshot(
+          JSON.parse(
+            JSON.stringify({
+              ...initialSnapshot,
+              updatedAt: Date.now(),
+            })
+          )
+        );
+        if (snapshotClone) {
+          setTheme(snapshotClone.theme);
+          setBackground(snapshotClone.background);
+          setTextElements(snapshotClone.textElements);
+          setStickyNotes(snapshotClone.stickyNotes);
+          setImageElements(snapshotClone.imageElements);
+          setStickerElements(snapshotClone.stickerElements);
+          setAudioElements(snapshotClone.audioElements);
+          setGlobalAudio(snapshotClone.globalAudio);
+          const comparable = buildComparablePayload({
+            theme: snapshotClone.theme,
+            background: snapshotClone.background,
+            textElements: snapshotClone.textElements,
+            stickyNotes: snapshotClone.stickyNotes,
+            imageElements: snapshotClone.imageElements,
+            stickerElements: snapshotClone.stickerElements,
+            audioElements: snapshotClone.audioElements,
+            globalAudio: snapshotClone.globalAudio,
+          });
+          snapshotComparableRef.current = serializeComparable(comparable);
+          snapshotToEmit = snapshotClone;
+          hydratedFromTemplate = true;
+          console.debug("[CanvasBoard] Applied initial template snapshot", {
+            storageKey,
+            updatedAt: snapshotClone.updatedAt,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to apply initial snapshot", error);
+      }
+    }
+
     if (!snapshotToEmit) {
       const fallbackBackground = parseInitialBackground(initialBackground);
       if (Object.keys(fallbackBackground).length > 0) {
@@ -2048,11 +2096,12 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
       });
     }
 
+    hydratedFromTemplateRef.current = hydratedFromTemplate;
     setIsHydrated(true);
     if (snapshotToEmit && onSnapshotChange) {
       onSnapshotChange(snapshotToEmit);
     }
-  }, [initialBackground, onSnapshotChange, storageKey]);
+  }, [initialBackground, initialSnapshot, onSnapshotChange, storageKey]);
 
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;

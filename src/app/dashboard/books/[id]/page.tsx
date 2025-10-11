@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import type { BookCoverVariant } from "@/components/book-cover";
 import { getTemplateById } from "@/data/book-templates";
@@ -67,13 +67,30 @@ const subtitleColorOptions = [
 
 const BookBuilderPage = () => {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const templateId = params?.id ?? "blank";
+  const draftId = params?.id ?? "blank";
+  const templateParam = searchParams.get("template");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (templateParam) return;
+
+    const isBlank = draftId === "blank";
+    const templateExists = !isBlank && Boolean(getTemplateById(draftId));
+    if (!isBlank && !templateExists) return;
+
+    const base = isBlank ? "blank" : draftId;
+    const derivedId = `${base}-${Date.now().toString(36)}${Math.random()
+      .toString(36)
+      .slice(2, 6)}`;
+    router.replace(`/dashboard/books/${derivedId}?template=${base}`);
+  }, [draftId, router, templateParam]);
 
   const template = useMemo(() => {
-    if (templateId === "blank") return null;
-    return getTemplateById(templateId);
-  }, [templateId]);
+    if (!templateParam || templateParam === "blank") return null;
+    return getTemplateById(templateParam);
+  }, [templateParam]);
 
   const base = template ?? blankDefaults;
 
@@ -85,6 +102,14 @@ const BookBuilderPage = () => {
   const [titleColor, setTitleColor] = useState<string>("");
   const [subtitleColor, setSubtitleColor] = useState<string>("");
   const [isDraftHydrated, setIsDraftHydrated] = useState(false);
+  const [sourceTemplateId, setSourceTemplateId] = useState<string | null>(
+    templateParam ?? null
+  );
+
+  useEffect(() => {
+    if (!templateParam) return;
+    setSourceTemplateId(templateParam);
+  }, [templateParam]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -94,7 +119,7 @@ const BookBuilderPage = () => {
       if (!draftsRaw) return;
 
       const drafts = JSON.parse(draftsRaw) as Record<string, DraftPayload>;
-      const existing = drafts[templateId];
+      const existing = drafts[draftId];
       if (!existing) return;
 
       if (existing.title) setTitle(existing.title);
@@ -117,12 +142,17 @@ const BookBuilderPage = () => {
 
       if (existing.titleColor) setTitleColor(existing.titleColor);
       if (existing.subtitleColor) setSubtitleColor(existing.subtitleColor);
+      if (typeof existing.sourceTemplateId === "string") {
+        setSourceTemplateId(existing.sourceTemplateId);
+      } else if (existing.sourceTemplateId === null) {
+        setSourceTemplateId(null);
+      }
     } catch (error) {
       console.error("Failed to load draft configuration", error);
     } finally {
       setIsDraftHydrated(true);
     }
-  }, [templateId]);
+  }, [draftId]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -151,8 +181,8 @@ const BookBuilderPage = () => {
         const drafts = draftsRaw
           ? (JSON.parse(draftsRaw) as Record<string, DraftPayload>)
           : {};
-        drafts[templateId] = {
-          id: templateId,
+        drafts[draftId] = {
+          id: draftId,
           title,
           subtitle: subtitle || undefined,
           coverImage: coverImage ?? null,
@@ -160,11 +190,12 @@ const BookBuilderPage = () => {
           variant: template?.variant ?? "solid",
           titleColor: titleColor || null,
           subtitleColor: subtitleColor || null,
+          sourceTemplateId: sourceTemplateId ?? templateParam ?? (template ? template.id : "blank"),
           updatedAt,
         };
         syncDraftsAndRecents<DraftPayload>(drafts);
         console.debug("[BookBuilder] Persisted draft", {
-          templateId,
+          draftId,
           updatedAt,
           hasCover: Boolean(coverImage),
           background: activeBackground,
@@ -176,10 +207,13 @@ const BookBuilderPage = () => {
     [
       activeBackground,
       coverImage,
+      draftId,
+      sourceTemplateId,
       subtitle,
       subtitleColor,
+      template?.id,
       template?.variant,
-      templateId,
+      templateParam,
       title,
       titleColor,
     ]
@@ -195,9 +229,21 @@ const BookBuilderPage = () => {
   }, [isDraftHydrated, persistCurrentDraft]);
 
   const handleNext = () => {
-    persistCurrentDraft(Date.now());
+    if (!coverImage) {
+      window.alert("Add a cover image before opening your notebook.");
+      return;
+    }
+    const timestamp = Date.now();
+    persistCurrentDraft(timestamp);
 
-    router.push(`/dashboard/books/${templateId}/canvas`);
+    const templateQuery =
+      (sourceTemplateId ?? templateParam ?? (template ? template.id : "blank")) ||
+      undefined;
+    const queryString = templateQuery
+      ? `?template=${encodeURIComponent(templateQuery)}`
+      : "";
+
+    router.push(`/dashboard/books/${draftId}/canvas${queryString}`);
   };
 
   return (

@@ -16,6 +16,11 @@ const Dashboard = () => {
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   const userToggledTemplates = useRef(false);
 
+  const createDraftId = (prefix: string) =>
+    `${prefix}-${Date.now().toString(36)}${Math.random()
+      .toString(36)
+      .slice(2, 6)}`;
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -68,11 +73,13 @@ const Dashboard = () => {
   };
 
   const handleCreateNewBook = () => {
-    router.push("/dashboard/books/blank");
+    const draftId = createDraftId("blank");
+    router.push(`/dashboard/books/${draftId}?template=blank`);
   };
 
   const handleTemplateSelect = (templateId: string) => {
-    router.push(`/dashboard/books/${templateId}/canvas`);
+    const draftId = createDraftId(templateId);
+    router.push(`/dashboard/books/${draftId}/canvas?template=${templateId}`);
   };
 
   const carouselPreviewCount = 6;

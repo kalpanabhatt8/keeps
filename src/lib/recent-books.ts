@@ -12,6 +12,7 @@ export type RecentBook = {
   variant: "solid" | "grid" | "abstract" | "strap" | "gradient";
   titleColor?: string | null;
   subtitleColor?: string | null;
+  sourceTemplateId?: string | null;
   updatedAt: number;
 };
 
@@ -76,6 +77,12 @@ const normalizeRecentBook = (value: unknown): RecentBook | null => {
     normalized.subtitleColor = value.subtitleColor;
   } else if (value.subtitleColor === null) {
     normalized.subtitleColor = null;
+  }
+
+  if (typeof value.sourceTemplateId === "string") {
+    normalized.sourceTemplateId = value.sourceTemplateId;
+  } else if (value.sourceTemplateId === null) {
+    normalized.sourceTemplateId = null;
   }
 
   return normalized;
@@ -167,6 +174,13 @@ export const syncDraftsAndRecents = <T extends DraftLike>(
       } else if (raw.subtitleColor === null) {
         fallback.subtitleColor = null;
       }
+      if (typeof raw.sourceTemplateId === "string") {
+        fallback.sourceTemplateId = raw.sourceTemplateId as string;
+      } else if (raw.sourceTemplateId === null) {
+        fallback.sourceTemplateId = null;
+      }
+
+      const normalizedBook = normalized ?? fallback;
 
       return {
         id,
@@ -174,8 +188,33 @@ export const syncDraftsAndRecents = <T extends DraftLike>(
           ...value,
           id,
           updatedAt,
+          coverImage:
+            typeof normalizedBook.coverImage === "string"
+              ? normalizedBook.coverImage
+              : normalizedBook.coverImage ?? null,
+          background: normalizedBook.background,
+          title: normalizedBook.title,
+          subtitle: normalizedBook.subtitle ?? undefined,
+          titleColor:
+            typeof normalizedBook.titleColor === "string"
+              ? normalizedBook.titleColor
+              : normalizedBook.titleColor === null
+              ? null
+              : undefined,
+          subtitleColor:
+            typeof normalizedBook.subtitleColor === "string"
+              ? normalizedBook.subtitleColor
+              : normalizedBook.subtitleColor === null
+              ? null
+              : undefined,
+          sourceTemplateId:
+            typeof normalizedBook.sourceTemplateId === "string"
+              ? normalizedBook.sourceTemplateId
+              : normalizedBook.sourceTemplateId === null
+              ? null
+              : undefined,
         } as T,
-        normalized: normalized ?? fallback,
+        normalized: normalizedBook,
         updatedAt,
       };
     })
