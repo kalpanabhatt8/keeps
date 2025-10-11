@@ -19,6 +19,8 @@
   --font-alt: var(--font-space-grotesk), sans-serif;
   --font-race: var(--font-caress);
   --font-jewel: var(--font-vensfolk);
+  
+
 }
 
 /* =========================
@@ -82,7 +84,7 @@
   --color-halo-soft: #FFD6EC;
   --color-halo-glow: #FFB8D2;
   --color-highlight-star: #FFD700;
-  ---color-iconbutton: #FFB8D2;
+  --color-iconbutton: #FFB8D2;
   --color-iconborder-border: #34413E;
   --color-iconbutton-hover: #EAEEED;
   --color-icon: #60324C;
@@ -459,7 +461,7 @@ body {
 
 button {
   font-size: 1rem;
-  padding: 0.75rem;
+  /* padding: 0.75rem; */
 }
 
 button:hover {
@@ -685,9 +687,9 @@ button:hover {
   justify-content: center;
   height: 100%;
   border-radius: 0.5rem;
-  border: 1px dashed var(--color-theme-neutral-border);
-  background: var(--color-theme-neutral-card);
-  color: var(--color-ink-muted);
+  border: 1px dashed #CBD0F5 !important;
+  background: #FDFCFE !important;
+  color: #b0b0b0 !important;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -760,7 +762,7 @@ div.recent-group {
 
 .starter-carousel__track {
   display: flex;
-  gap: 1.4rem;
+  gap: 2rem;
   overflow-x: auto;
   padding: 1rem 1.4rem 4rem 0rem;
   scroll-snap-type: x mandatory;
@@ -835,7 +837,7 @@ div.recent-group {
 .starter-grid {
   display: flex;
   flex-direction: row;
-  gap: 1.4rem;
+  gap: 2rem;
   flex-wrap: wrap;
   justify-items: center;
   padding: 0rem 1.4rem 4rem 0rem;

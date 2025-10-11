@@ -228,24 +228,37 @@ const BookBuilderPage = () => {
     return () => window.clearTimeout(timeout);
   }, [isDraftHydrated, persistCurrentDraft]);
 
+  // const handleNext = () => {
+  //   if (!coverImage) {
+  //     window.alert("Add a cover image before opening your notebook.");
+  //     return;
+  //   }
+  //   const timestamp = Date.now();
+  //   persistCurrentDraft(timestamp);
+
+  //   const templateQuery =
+  //     (sourceTemplateId ?? templateParam ?? (template ? template.id : "blank")) ||
+  //     undefined;
+  //   const queryString = templateQuery
+  //     ? `?template=${encodeURIComponent(templateQuery)}`
+  //     : "";
+
+  //   router.push(`/dashboard/books/${draftId}/canvas${queryString}`);
+  // };
   const handleNext = () => {
-    if (!coverImage) {
-      window.alert("Add a cover image before opening your notebook.");
-      return;
-    }
     const timestamp = Date.now();
     persistCurrentDraft(timestamp);
-
+  
     const templateQuery =
       (sourceTemplateId ?? templateParam ?? (template ? template.id : "blank")) ||
       undefined;
     const queryString = templateQuery
       ? `?template=${encodeURIComponent(templateQuery)}`
       : "";
-
+  
     router.push(`/dashboard/books/${draftId}/canvas${queryString}`);
   };
-
+  
   return (
     <main className="min-h-screen w-full pb-24">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-6 pt-12 md:px-10 lg:pt-16">

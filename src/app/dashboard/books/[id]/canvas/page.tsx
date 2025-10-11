@@ -359,7 +359,7 @@ const CanvasPage = () => {
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={open}
-                className={`pointer-events-auto flex items-center gap-0.5 text-sm transition rounded-md bg-[var(--color-iconbutton)] text-[var(--color-icon)] border-1 border-[var(--color-iconborder-border)] hover:bg-[var(--color-iconbutton-hover))] ${
+                className={`pointer-events-auto flex items-center gap-0.5 p-[0.75rem] text-sm transition rounded-md bg-[var(--color-iconbutton)] text-[var(--color-icon)] border-1 border-[var(--color-iconborder-border)] hover:bg-[var(--color-iconbutton-hover))] ${
                   open ? "bg-surface-base text-ink" : "text-ink-soft"
                 }`}
               >

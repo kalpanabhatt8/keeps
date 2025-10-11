@@ -174,7 +174,8 @@ const Dashboard = () => {
                 <button
                   type="button"
                   onClick={handleCreateNewBook}
-                  className="starter-grid__card group"
+                  className="starter-grid__card group !p-0"
+                    aria-label="Create blank notebook"
                 >
                   <div className="aspect-[128/186] w-full">
                     <div className="empty-template-card h-full w-full">

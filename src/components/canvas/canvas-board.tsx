@@ -2240,10 +2240,10 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
           setGlobalAudio={setGlobalAudio}
         />
       </div>
-      <p className="text-lg font-semibold">Canvas board reset</p>
+      {/* <p className="text-lg font-semibold">Canvas board reset</p>
       <p className="text-sm">
         The interactive canvas is temporarily disabled while we rebuild it.
-      </p>
+      </p> */}
       {/* Render image elements (draggable, resizable, rotatable) */}
       <div
         className="relative mt-8 flex flex-col items-center"
