@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getTemplateById } from "@/data/book-templates";
-import CanvasBoard from "@/components/canvas/canvas-board";
+import CanvasBoard, {
+  type CanvasSnapshot,
+} from "@/components/canvas/canvas-board";
 import {
   ArrowLeft,
   ChevronDown,
@@ -14,6 +16,11 @@ import {
 } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import Popup from "reactjs-popup";
+import {
+  DRAFTS_STORAGE_KEY,
+  syncDraftsAndRecents,
+  type RecentBook,
+} from "@/lib/recent-books";
 
 const blankDefaults = {
   id: "blank",
@@ -23,16 +30,30 @@ const blankDefaults = {
   background: "linear-gradient(135deg, #f8f7ff 0%, #ebe9ff 100%)",
 };
 
-type Draft = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  coverImage?: string | null;
-  background: string;
-  variant: "solid" | "grid" | "abstract" | "strap" | "gradient";
-  titleColor?: string | null;
-  subtitleColor?: string | null;
-  updatedAt: number;
+type Draft = RecentBook;
+
+const deriveBackgroundStyle = (
+  background: CanvasSnapshot["background"],
+  fallback: string
+) => {
+  if (background.image) {
+    const trimmed = background.image.trim();
+    if (trimmed.length > 0) {
+      const lower = trimmed.toLowerCase();
+      if (
+        lower.startsWith("url(") ||
+        lower.includes("gradient(") ||
+        lower.includes("gradient ")
+      ) {
+        return trimmed;
+      }
+      return `url(${trimmed})`;
+    }
+  }
+  if (background.pattern) return background.pattern;
+  if (background.texture) return background.texture;
+  if (background.color) return background.color;
+  return fallback;
 };
 const CanvasPage = () => {
   const params = useParams<{ id: string }>();
@@ -59,41 +80,158 @@ const CanvasPage = () => {
   }, [bookId, template]);
 
   const [draft, setDraft] = useState<Draft>(baseDraft);
-  const [lastSaved, setLastSaved] = useState<number>(Date.now());
+  const [lastSaved, setLastSaved] = useState<number>(baseDraft.updatedAt);
+  const [isDraftHydrated, setIsDraftHydrated] = useState(false);
+  const [, forceRefresh] = useState(0);
+  const draftRef = React.useRef<Draft>(baseDraft);
+  const pendingSnapshotRef = React.useRef<CanvasSnapshot | null>(null);
+  const isDraftHydratedRef = React.useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     try {
-      const draftsRaw = localStorage.getItem("keeps-drafts");
+      const draftsRaw = localStorage.getItem(DRAFTS_STORAGE_KEY);
       const drafts = draftsRaw
         ? (JSON.parse(draftsRaw) as Record<string, Draft>)
         : {};
       const existing = drafts[bookId];
-      const nextDraft = existing ? { ...baseDraft, ...existing } : baseDraft;
-      setDraft(nextDraft);
-
-      drafts[bookId] = { ...nextDraft, updatedAt: Date.now() };
-      localStorage.setItem("keeps-drafts", JSON.stringify(drafts));
-
-      const recentsRaw = localStorage.getItem("keeps-recents");
-      const recents = recentsRaw ? (JSON.parse(recentsRaw) as Draft[]) : [];
-      const filtered = recents.filter((item) => item.id !== bookId);
-      filtered.unshift({ ...nextDraft, updatedAt: Date.now() });
-      localStorage.setItem(
-        "keeps-recents",
-        JSON.stringify(filtered.slice(0, 25))
-      );
-      setLastSaved(Date.now());
+      const now = Date.now();
+      const nextDraft = {
+        ...baseDraft,
+        ...(existing ?? {}),
+        updatedAt: now,
+      };
+      const updatedDrafts: Record<string, Draft> = {
+        ...drafts,
+        [bookId]: nextDraft,
+      };
+      const { drafts: limitedDrafts } =
+        syncDraftsAndRecents<Draft>(updatedDrafts);
+      const persistedDraft = limitedDrafts[bookId] ?? nextDraft;
+      draftRef.current = persistedDraft;
+      setDraft(persistedDraft);
+      setLastSaved(persistedDraft.updatedAt);
+      setIsDraftHydrated(true);
     } catch (error) {
       console.error("Failed to load draft", error);
+      setIsDraftHydrated(true);
     }
   }, [baseDraft, bookId]);
 
   useEffect(() => {
-    const interval = setInterval(() => setLastSaved(Date.now()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
+    draftRef.current = draft;
+  }, [draft]);
+
+  useEffect(() => {
+    isDraftHydratedRef.current = isDraftHydrated;
+  }, [isDraftHydrated]);
+
+  const persistDraft = useCallback(
+    (updates: Partial<Draft>, updatedAtOverride?: number) => {
+      const updatedAt = updatedAtOverride ?? Date.now();
+      const current = draftRef.current ?? baseDraft;
+      const nextDraft: Draft = {
+        ...current,
+        ...updates,
+        id: bookId,
+        updatedAt,
+      };
+      draftRef.current = nextDraft;
+      setDraft(nextDraft);
+      setLastSaved(updatedAt);
+      console.debug("[CanvasPage] Persisting draft", {
+        bookId,
+        updatedAt,
+        updates,
+      });
+
+      if (typeof window === "undefined") {
+        return nextDraft;
+      }
+
+      try {
+        const draftsRaw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
+        const drafts = draftsRaw
+          ? (JSON.parse(draftsRaw) as Record<string, Draft>)
+          : {};
+        drafts[bookId] = nextDraft;
+        const { drafts: syncedDrafts } =
+          syncDraftsAndRecents<Draft>(drafts);
+        const syncedDraft = syncedDrafts[bookId];
+        if (syncedDraft) {
+          draftRef.current = syncedDraft;
+          setDraft(syncedDraft);
+          setLastSaved(syncedDraft.updatedAt);
+          console.debug("[CanvasPage] Draft persisted via sync", {
+            bookId,
+            updatedAt: syncedDraft.updatedAt,
+          });
+          return syncedDraft;
+        }
+      } catch (error) {
+        console.error("Failed to persist draft", error);
+      }
+
+      return nextDraft;
+    },
+    [baseDraft, bookId]
+  );
+
+  const applySnapshotToDraft = useCallback(
+    (snapshot: CanvasSnapshot) => {
+      const fallbackBackground =
+        draftRef.current?.background ?? baseDraft.background;
+      const backgroundStyle = deriveBackgroundStyle(
+        snapshot.background,
+        fallbackBackground
+      );
+      console.debug("[CanvasPage] Applying canvas snapshot to draft", {
+        bookId,
+        updatedAt: snapshot.updatedAt,
+        snapshotBackground: snapshot.background,
+        derivedBackground: backgroundStyle,
+      });
+      persistDraft({ background: backgroundStyle }, snapshot.updatedAt);
+    },
+    [baseDraft.background, persistDraft]
+  );
+
+  const handleSnapshotChange = useCallback(
+    (snapshot: CanvasSnapshot) => {
+      if (!isDraftHydratedRef.current) {
+        pendingSnapshotRef.current = snapshot;
+        console.debug("[CanvasPage] Snapshot queued until hydration", {
+          bookId,
+          updatedAt: snapshot.updatedAt,
+        });
+        return;
+      }
+      pendingSnapshotRef.current = null;
+      applySnapshotToDraft(snapshot);
+    },
+    [applySnapshotToDraft]
+  );
+
+  useEffect(() => {
+    if (!isDraftHydrated || !pendingSnapshotRef.current) return;
+    const snapshot = pendingSnapshotRef.current;
+    pendingSnapshotRef.current = null;
+    console.debug("[CanvasPage] Flushing queued snapshot after hydration", {
+      bookId,
+      updatedAt: snapshot.updatedAt,
+    });
+    applySnapshotToDraft(snapshot);
+  }, [applySnapshotToDraft, isDraftHydrated]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isDraftHydrated) return;
+    const interval = window.setInterval(
+      () => forceRefresh((tick) => tick + 1),
+      60_000
+    );
+    return () => window.clearInterval(interval);
+  }, [forceRefresh, isDraftHydrated]);
 
   const formatRelativeTime = (timestamp: number) => {
     const diff = Date.now() - timestamp;
@@ -109,13 +247,17 @@ const CanvasPage = () => {
   const boardStorageKey = useMemo(() => `keeps-board-${bookId}`, [bookId]);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-[#f4f3ff]">
+    <main
+      data-theme={draft.variant}
+      className="relative h-screen w-screen overflow-hidden bg-[var(--color-background)] transition-colors duration-300"
+    >
       <CanvasBoard
         storageKey={boardStorageKey}
         initialBackground={draft.background}
+        onSnapshotChange={handleSnapshotChange}
       />
 
-      <div className="pointer-events-none absolute left-4 top-4 z-40 flex items-center gap-3 bg-white/90 p-1 shadow-md rounded-lg">
+      <div className="pointer-events-none absolute left-4 top-4 z-40 flex items-center gap-3 bg-[var(---color-iconbutton)] text-[var(--color-icon)] p-1 rounded-lg">
         <div className="flex flex-row gap-2 relative items-center">
           {/* <Popup
             trigger={
@@ -175,24 +317,22 @@ const CanvasPage = () => {
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={open}
-                className={`pointer-events-auto flex items-center gap-0.5 text-sm transition p-2 rounded-md hover:text-ink focus:text-primary focus:bg-surface-base ${
+                className={`pointer-events-auto flex items-center gap-0.5 text-sm transition rounded-md bg-[var(--color-iconbutton)] text-[var(--color-icon)] border-1 border-[var(--color-iconborder-border)] hover:bg-[var(--color-iconbutton-hover))] ${
                   open ? "bg-surface-base text-ink" : "text-ink-soft"
                 }`}
               >
                 <Sparkle
-                  strokeWidth={1.5}
                   size={18}
                   className={`${
                     open ? "opacity-100" : "opacity-90"
                   } transition-opacity`}
                 />
-                <ChevronDown
-                  strokeWidth={1}
-                  size={16}
+                {/* <ChevronDown
+                  size={18}
                   className={`${
                     open ? "rotate-180" : ""
                   } transition-transform duration-200`}
-                />
+                /> */}
               </button>
             )}
             position="bottom left"

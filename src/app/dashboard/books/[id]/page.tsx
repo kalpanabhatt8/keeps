@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { useParams, useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import type { BookCoverVariant } from "@/components/book-cover";
 import { getTemplateById } from "@/data/book-templates";
+import {
+  DRAFTS_STORAGE_KEY,
+  syncDraftsAndRecents,
+  type RecentBook,
+} from "@/lib/recent-books";
 
 const blankDefaults = {
   id: "blank",
@@ -42,17 +47,7 @@ const galleryOptions = [
   },
 ];
 
-type DraftPayload = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  coverImage: string | null;
-  background: string;
-  variant: BookCoverVariant;
-  titleColor?: string | null;
-  subtitleColor?: string | null;
-  updatedAt: number;
-};
+type DraftPayload = RecentBook & { variant: BookCoverVariant };
 
 const titleColorOptions = [
   { id: "ink-strong", label: "Deep Ink", value: "#3D3D3D" },
@@ -89,12 +84,13 @@ const BookBuilderPage = () => {
   const [customBackground, setCustomBackground] = useState<string>("");
   const [titleColor, setTitleColor] = useState<string>("");
   const [subtitleColor, setSubtitleColor] = useState<string>("");
+  const [isDraftHydrated, setIsDraftHydrated] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     try {
-      const draftsRaw = localStorage.getItem("keeps-drafts");
+      const draftsRaw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
       if (!draftsRaw) return;
 
       const drafts = JSON.parse(draftsRaw) as Record<string, DraftPayload>;
@@ -103,7 +99,9 @@ const BookBuilderPage = () => {
 
       if (existing.title) setTitle(existing.title);
       if (typeof existing.subtitle === "string") setSubtitle(existing.subtitle);
-      if (existing.coverImage) setCoverImage(existing.coverImage);
+      if (typeof existing.coverImage === "string" || existing.coverImage === null) {
+        setCoverImage(existing.coverImage ?? null);
+      }
 
       if (existing.background) {
         const matchesPreset = backgroundOptions.some(
@@ -121,6 +119,8 @@ const BookBuilderPage = () => {
       if (existing.subtitleColor) setSubtitleColor(existing.subtitleColor);
     } catch (error) {
       console.error("Failed to load draft configuration", error);
+    } finally {
+      setIsDraftHydrated(true);
     }
   }, [templateId]);
 
@@ -142,25 +142,60 @@ const BookBuilderPage = () => {
 
   const activeBackground = customBackground.trim() ? customBackground : background;
 
+  const persistCurrentDraft = useCallback(
+    (updatedAt: number) => {
+      if (typeof window === "undefined") return;
+
+      try {
+        const draftsRaw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
+        const drafts = draftsRaw
+          ? (JSON.parse(draftsRaw) as Record<string, DraftPayload>)
+          : {};
+        drafts[templateId] = {
+          id: templateId,
+          title,
+          subtitle: subtitle || undefined,
+          coverImage: coverImage ?? null,
+          background: activeBackground,
+          variant: template?.variant ?? "solid",
+          titleColor: titleColor || null,
+          subtitleColor: subtitleColor || null,
+          updatedAt,
+        };
+        syncDraftsAndRecents<DraftPayload>(drafts);
+        console.debug("[BookBuilder] Persisted draft", {
+          templateId,
+          updatedAt,
+          hasCover: Boolean(coverImage),
+          background: activeBackground,
+        });
+      } catch (error) {
+        console.error("Failed to persist draft", error);
+      }
+    },
+    [
+      activeBackground,
+      coverImage,
+      subtitle,
+      subtitleColor,
+      template?.variant,
+      templateId,
+      title,
+      titleColor,
+    ]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isDraftHydrated) return;
+    const timeout = window.setTimeout(
+      () => persistCurrentDraft(Date.now()),
+      250
+    );
+    return () => window.clearTimeout(timeout);
+  }, [isDraftHydrated, persistCurrentDraft]);
+
   const handleNext = () => {
-    try {
-      const draftsRaw = localStorage.getItem("keeps-drafts");
-      const drafts = draftsRaw ? (JSON.parse(draftsRaw) as Record<string, DraftPayload>) : {};
-      drafts[templateId] = {
-        id: templateId,
-        title,
-        subtitle,
-        coverImage: coverImage ?? null,
-        background: activeBackground,
-        variant: template?.variant ?? "solid",
-        titleColor: titleColor || null,
-        subtitleColor: subtitleColor || null,
-        updatedAt: Date.now(),
-      };
-      localStorage.setItem("keeps-drafts", JSON.stringify(drafts));
-    } catch (error) {
-      console.error("Failed to persist draft", error);
-    }
+    persistCurrentDraft(Date.now());
 
     router.push(`/dashboard/books/${templateId}/canvas`);
   };

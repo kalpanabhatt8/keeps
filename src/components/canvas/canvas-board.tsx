@@ -196,21 +196,20 @@ const stickerIconByTheme: Record<
 };
 
 import React, { useEffect } from "react";
-import { LucideSearch, LucidePlay } from "lucide-react";
+import { themeConfig } from "@/theme/themeConfig";
+import { LucideSearch } from "lucide-react";
 
 type MusicSearchPopupProps = {
   theme: Theme;
   addAudioElement: (src: string, title?: string) => void; // not used anymore, but keep for prop compatibility
   setGlobalAudio: React.Dispatch<
-    React.SetStateAction<
-      {
-        videoId: string;
-        title: string;
-        thumbnail?: string;
-        channelTitle?: string;
-        artist?: string;
-      } | null
-    >
+    React.SetStateAction<{
+      videoId: string;
+      title: string;
+      thumbnail?: string;
+      channelTitle?: string;
+      artist?: string;
+    } | null>
   >;
 };
 
@@ -219,6 +218,7 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
   addAudioElement,
   setGlobalAudio,
 }) => {
+  const AudioIcon = themeConfig[theme].audioIcon;
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -232,8 +232,13 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
   >([]);
   const [error, setError] = React.useState<string | null>(null);
   // NEW: Local popup audio cards
-  const [popupAudios, setPopupAudios] = React.useState<
-    Array<{ videoId: string; title: string; thumbnail: string; channelTitle: string }>
+  const [, setPopupAudios] = React.useState<
+    Array<{
+      videoId: string;
+      title: string;
+      thumbnail: string;
+      channelTitle: string;
+    }>
   >([]);
 
   // Styling for popup content
@@ -242,12 +247,8 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
     padding: "0.5rem",
     borderRadius: "0.75rem",
     boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
-    background: undefined as string | undefined,
+    background: "transparent",
   };
-  if (theme === "neutral") contentStyle.background = "#fff";
-  else if (theme === "kawaii") contentStyle.background = "#ffe4ef";
-  else if (theme === "retro") contentStyle.background = "#fef7d5";
-  else if (theme === "anime") contentStyle.background = "#ede9fe";
 
   // Fetch from YouTube Data API
   const doSearch = async (query: string) => {
@@ -262,10 +263,9 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
         return;
       }
       // videoCategoryId=10 (Music), type=video, maxResults=15, safeSearch=strict
-      const url =
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&videoCategoryId=10&q=${encodeURIComponent(
-          query
-        )}&key=${apiKey}&safeSearch=strict`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&videoCategoryId=10&q=${encodeURIComponent(
+        query
+      )}&key=${apiKey}&safeSearch=strict`;
       const res = await fetch(url);
       if (!res.ok) {
         let msg = "Failed to fetch from YouTube.";
@@ -287,7 +287,10 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
       const items = data.items.map((item: any) => ({
         videoId: item.id.videoId,
         title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || "",
+        thumbnail:
+          item.snippet.thumbnails?.medium?.url ||
+          item.snippet.thumbnails?.default?.url ||
+          "",
         channelTitle: item.snippet.channelTitle,
       }));
       setResults(items);
@@ -299,42 +302,24 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
   };
 
   // Handle Enter key to search
-  const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleSearchInputKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === "Enter" && search.trim().length > 0) {
       doSearch(search.trim());
     }
   };
 
-  // Theme styles for button
-  const addBtnClass = (theme: Theme) =>
-    clsx(
-      "rounded px-2 py-1 text-xs font-semibold ml-2 transition",
-      theme === "kawaii"
-        ? "bg-pink-200 text-pink-800 hover:bg-pink-300"
-        : theme === "retro"
-        ? "bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
-        : theme === "anime"
-        ? "bg-purple-200 text-purple-800 hover:bg-purple-300"
-        : "bg-gray-200 text-black hover:bg-gray-300"
-    );
-
-  // Theme styles for embedded audio card
-  const cardStyle = {
-    background:
-      theme === "kawaii"
-        ? "#ffe4ef"
-        : theme === "retro"
-        ? "#fef7d5"
-        : theme === "anime"
-        ? "#ede9fe"
-        : "#f9fafb",
-    borderRadius: 10,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-    border: "1px solid #eee",
-    marginBottom: 8,
-    padding: 0,
-    overflow: "hidden",
-  } as React.CSSProperties;
+  const themedButtonClass = clsx(
+    "rounded px-2 py-1 text-xs font-semibold transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
+  const listItemClass = clsx(
+    "flex items-center px-2 py-2 rounded transition",
+    themeConfig[theme].panel,
+    themeConfig[theme].hover
+  );
 
   return (
     <>
@@ -343,13 +328,13 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
           <button
             aria-label="Music"
             className={clsx(
-              buttonClass(theme),
-              hoverFX(theme),
-              "ml-2"
+              "ml-2 flex items-center justify-center rounded-full p-3 transition",
+              themeConfig[theme].button,
+              themeConfig[theme].hover
             )}
             type="button"
           >
-            <LucideMusic size={18} />
+            <AudioIcon size={18} />
           </button>
         }
         position="bottom right"
@@ -366,317 +351,247 @@ const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
         }}
         onClose={() => setOpen(false)}
       >
-      <div
-        className={clsx(
-          "flex flex-col gap-2",
-          panelThemeClass(theme)
-        )}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            type="text"
-            autoFocus
-            placeholder="Search YouTube music…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleSearchInputKeyDown}
-            className={clsx(
-              "rounded px-3 py-1 w-full border focus:outline-none",
-              theme === "kawaii"
-                ? "border-pink-300 bg-pink-50"
-                : theme === "retro"
-                ? "border-yellow-300 bg-yellow-50"
-                : theme === "anime"
-                ? "border-purple-300 bg-purple-50"
-                : "border-gray-200 bg-white"
-            )}
-            style={{ fontSize: 15 }}
-          />
-          <button
-            type="button"
-            aria-label="Search"
-            className={clsx(
-              "rounded-full p-2",
-              theme === "kawaii" && "hover:bg-pink-200",
-              theme === "retro" && "hover:bg-yellow-200",
-              theme === "anime" && "hover:bg-purple-200"
-            )}
-            disabled={loading || search.trim().length === 0}
-            onClick={() => search.trim().length > 0 && doSearch(search.trim())}
-            style={{ minWidth: 36 }}
-          >
-            <LucideSearch size={16} />
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {loading && (
-            <div className="text-xs text-center opacity-70 py-3">Searching…</div>
-          )}
-          {error && (
-            <div className="text-xs text-center text-red-500 py-2">{error}</div>
-          )}
-          {/* Default curated songs if no search results */}
-          {!loading && !error && results.length === 0 && (() => {
-            // Hardcoded curated tracks
-            const defaultSongs = [
-              {
-                videoId: "jfKfPfyJRdk",
-                title: "lofi hip hop radio - beats to relax/study to",
-                channelTitle: "Lofi Girl",
-                thumbnail: "https://i.ytimg.com/vi/jfKfPfyJRdk/mqdefault.jpg",
-              },
-              {
-                videoId: "DWcJFNfaw9c",
-                title: "Chillhop Radio - jazzy & lofi hip hop beats",
-                channelTitle: "Chillhop Music",
-                thumbnail: "https://i.ytimg.com/vi/DWcJFNfaw9c/mqdefault.jpg",
-              },
-              {
-                videoId: "7NOSDKb0HlU",
-                title: "lofi beats to study/relax to",
-                channelTitle: "ChilledCow",
-                thumbnail: "https://i.ytimg.com/vi/7NOSDKb0HlU/mqdefault.jpg",
-              },
-              {
-                videoId: "n61ULEU7CO0",
-                title: "Best of Lofi Hip Hop 2021",
-                channelTitle: "Lofi Girl",
-                thumbnail: "https://i.ytimg.com/vi/n61ULEU7CO0/mqdefault.jpg",
-              },
-              {
-                videoId: "pVXKoic5vL0",
-                title: "Lost in Midnight Glow",
-                channelTitle: "Dreamy Lofi",
-                thumbnail: "https://i.ytimg.com/vi/pVXKoic5vL0/mqdefault.jpg",
-              },
-              {
-                videoId: "qSqqvhjNet4",
-                title: "Romantic Lofi Mashup",
-                channelTitle: "Lofi Mashups",
-                thumbnail: "https://i.ytimg.com/vi/qSqqvhjNet4/mqdefault.jpg",
-              },
-            ];
-            return (
-              <div>
-                <div className="text-xs text-center opacity-60 py-2">
-                  Try these curated lofi & chill tracks!
-                </div>
-                <ul className="w-full flex flex-col gap-1 max-h-64 overflow-y-auto">
-                  {defaultSongs.map((item) => (
-                    <li
-                      key={item.videoId}
-                      className={clsx(
-                        "flex items-center px-2 py-2 rounded hover:bg-gray-100",
-                        theme === "kawaii" && "hover:bg-pink-100",
-                        theme === "retro" && "hover:bg-yellow-100",
-                        theme === "anime" && "hover:bg-purple-100"
-                      )}
-                      style={{ minHeight: 54 }}
-                    >
-                      <img
-                        src={item.thumbnail}
-                        alt=""
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 6,
-                          objectFit: "cover",
-                          marginRight: 10,
-                          boxShadow: "0 2px 6px rgba(0,0,0,0.09)",
-                          background: "#fff",
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className="truncate font-semibold"
-                          style={{
-                            fontSize: 15,
-                            color:
-                              theme === "kawaii"
-                                ? "#be185d"
-                                : theme === "retro"
-                                ? "#92400e"
-                                : theme === "anime"
-                                ? "#6d28d9"
-                                : "#222",
-                          }}
-                        >
-                          {item.title}
-                        </div>
-                        <div
-                          className="truncate text-xs opacity-70"
-                          style={{
-                            color:
-                              theme === "kawaii"
-                                ? "#be185d"
-                                : theme === "retro"
-                                ? "#92400e"
-                                : theme === "anime"
-                                ? "#6d28d9"
-                                : "#555",
-                          }}
-                        >
-                          {item.channelTitle}
-                        </div>
-                      </div>
-                      <button
-                        className={addBtnClass(theme)}
-                        title="Add this song to your popup playlist"
-                        type="button"
-                        onClick={() => {
-                          setPopupAudios((prev) =>
-                            prev.some((aud) => aud.videoId === item.videoId)
-                              ? prev
-                              : [...prev, item]
-                          );
-                        }}
-                      >
-                        Add
-                      </button>
-                      <button
-                        className={addBtnClass(theme)}
-                        title="Play this song"
-                        type="button"
-                        onClick={() => {
-                          setGlobalAudio({
-                            videoId: item.videoId,
-                            title: item.title,
-                            thumbnail: item.thumbnail,
-                            channelTitle: item.channelTitle,
-                          });
-                        }}
-                        style={{ marginLeft: 8 }}
-                      >
-                        ▶ Play
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+        <div className={clsx("flex flex-col gap-2", themeConfig[theme].panel)}>
+          <div className="flex items-center gap-2 mb-2">
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search YouTube music…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchInputKeyDown}
+              className={clsx(
+                "rounded px-3 py-1 w-full border border-[var(--color-border-subtle)] bg-transparent focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition",
+                themeConfig[theme].panel
+              )}
+              style={{ fontSize: 15 }}
+            />
+            <button
+              type="button"
+              aria-label="Search"
+              className={clsx(
+                "rounded-full p-2 transition flex items-center justify-center disabled:opacity-60 disabled:pointer-events-none",
+                themeConfig[theme].button,
+                themeConfig[theme].hover
+              )}
+              disabled={loading || search.trim().length === 0}
+              onClick={() =>
+                search.trim().length > 0 && doSearch(search.trim())
+              }
+              style={{ minWidth: 36 }}
+            >
+              <LucideSearch size={16} />
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {loading && (
+              <div className="text-xs text-center opacity-70 py-3">
+                Searching…
               </div>
-            );
-          })()}
-          {!loading && results.length > 0 && (
-            <ul className="w-full flex flex-col gap-1 max-h-64 overflow-y-auto">
-              {results.map((item) => (
-                <li
-                  key={item.videoId}
-                  className={clsx(
-                    "flex items-center px-2 py-2 rounded hover:bg-gray-100",
-                    theme === "kawaii" && "hover:bg-pink-100",
-                    theme === "retro" && "hover:bg-yellow-100",
-                    theme === "anime" && "hover:bg-purple-100"
-                  )}
-                  style={{ minHeight: 54 }}
-                >
-                  <img
-                    src={item.thumbnail}
-                    alt=""
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 6,
-                      objectFit: "cover",
-                      marginRight: 10,
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.09)",
-                      background: "#fff",
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="truncate font-semibold"
-                      style={{
-                        fontSize: 15,
-                        color:
-                          theme === "kawaii"
-                            ? "#be185d"
-                            : theme === "retro"
-                            ? "#92400e"
-                            : theme === "anime"
-                            ? "#6d28d9"
-                            : "#222",
-                      }}
-                    >
-                      {item.title}
+            )}
+            {error && (
+              <div className="text-xs text-center text-red-500 py-2">
+                {error}
+              </div>
+            )}
+            {/* Default curated songs if no search results */}
+            {!loading &&
+              !error &&
+              results.length === 0 &&
+              (() => {
+                // Hardcoded curated tracks
+                const defaultSongs = [
+                  {
+                    videoId: "jfKfPfyJRdk",
+                    title: "lofi hip hop radio - beats to relax/study to",
+                    channelTitle: "Lofi Girl",
+                    thumbnail:
+                      "https://i.ytimg.com/vi/jfKfPfyJRdk/mqdefault.jpg",
+                  },
+                  {
+                    videoId: "DWcJFNfaw9c",
+                    title: "Chillhop Radio - jazzy & lofi hip hop beats",
+                    channelTitle: "Chillhop Music",
+                    thumbnail:
+                      "https://i.ytimg.com/vi/DWcJFNfaw9c/mqdefault.jpg",
+                  },
+                  {
+                    videoId: "7NOSDKb0HlU",
+                    title: "lofi beats to study/relax to",
+                    channelTitle: "ChilledCow",
+                    thumbnail:
+                      "https://i.ytimg.com/vi/7NOSDKb0HlU/mqdefault.jpg",
+                  },
+                  {
+                    videoId: "n61ULEU7CO0",
+                    title: "Best of Lofi Hip Hop 2021",
+                    channelTitle: "Lofi Girl",
+                    thumbnail:
+                      "https://i.ytimg.com/vi/n61ULEU7CO0/mqdefault.jpg",
+                  },
+                  {
+                    videoId: "pVXKoic5vL0",
+                    title: "Lost in Midnight Glow",
+                    channelTitle: "Dreamy Lofi",
+                    thumbnail:
+                      "https://i.ytimg.com/vi/pVXKoic5vL0/mqdefault.jpg",
+                  },
+                  {
+                    videoId: "qSqqvhjNet4",
+                    title: "Romantic Lofi Mashup",
+                    channelTitle: "Lofi Mashups",
+                    thumbnail:
+                      "https://i.ytimg.com/vi/qSqqvhjNet4/mqdefault.jpg",
+                  },
+                ];
+                return (
+                  <div>
+                    <div className="text-xs text-center opacity-60 py-2">
+                      Try these curated lofi & chill tracks!
                     </div>
-                    <div
-                      className="truncate text-xs opacity-70"
-                      style={{
-                        color:
-                          theme === "kawaii"
-                            ? "#be185d"
-                            : theme === "retro"
-                            ? "#92400e"
-                            : theme === "anime"
-                            ? "#6d28d9"
-                            : "#555",
-                      }}
-                    >
-                      {item.channelTitle}
-                    </div>
+                    <ul className="w-full flex flex-col gap-1 max-h-64 overflow-y-auto">
+                      {defaultSongs.map((item) => (
+                        <li
+                          key={item.videoId}
+                          className={clsx(listItemClass, "min-h-[54px]")}
+                        >
+                          <img
+                            src={item.thumbnail}
+                            alt=""
+                            style={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: 6,
+                              objectFit: "cover",
+                              marginRight: 10,
+                              boxShadow: "0 2px 6px rgba(0,0,0,0.09)",
+                              background: "var(--color-surface-overlay)",
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="truncate font-semibold text-[var(--color-ink-strong)] text-sm">
+                              {item.title}
+                            </div>
+                            <div className="truncate text-xs text-[var(--color-ink-soft)]">
+                              {item.channelTitle}
+                            </div>
+                          </div>
+                          <button
+                            className={clsx(themedButtonClass, "ml-2")}
+                            title="Add this song to your popup playlist"
+                            type="button"
+                            onClick={() => {
+                              setPopupAudios((prev) =>
+                                prev.some((aud) => aud.videoId === item.videoId)
+                                  ? prev
+                                  : [...prev, item]
+                              );
+                            }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            className={clsx(themedButtonClass, "ml-2")}
+                            title="Play this song"
+                            type="button"
+                            onClick={() => {
+                              setGlobalAudio({
+                                videoId: item.videoId,
+                                title: item.title,
+                                thumbnail: item.thumbnail,
+                                channelTitle: item.channelTitle,
+                              });
+                            }}
+                            style={{ marginLeft: 8 }}
+                          >
+                            ▶ Play
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <button
-                    className={addBtnClass(theme)}
-                    title="Play this song"
-                    type="button"
-                    onClick={() => {
-                      setGlobalAudio({
-                        videoId: item.videoId,
-                        title: item.title,
-                        thumbnail: item.thumbnail,
-                        channelTitle: item.channelTitle,
-                      });
-                    }}
+                );
+              })()}
+            {!loading && results.length > 0 && (
+              <ul className="w-full flex flex-col gap-1 max-h-64 overflow-y-auto">
+                {results.map((item) => (
+                  <li
+                    key={item.videoId}
+                    className={clsx(listItemClass, "min-h-[54px]")}
                   >
-                    ▶ Play
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                    <img
+                      src={item.thumbnail}
+                      alt=""
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 6,
+                        objectFit: "cover",
+                        marginRight: 10,
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.09)",
+                        background: "var(--color-surface-overlay)",
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate font-semibold text-[var(--color-ink-strong)] text-sm">
+                        {item.title}
+                      </div>
+                      <div className="truncate text-xs text-[var(--color-ink-soft)]">
+                        {item.channelTitle}
+                      </div>
+                    </div>
+                    <button
+                      className={clsx(themedButtonClass, "ml-2")}
+                      title="Play this song"
+                      type="button"
+                      onClick={() => {
+                        setGlobalAudio({
+                          videoId: item.videoId,
+                          title: item.title,
+                          thumbnail: item.thumbnail,
+                          channelTitle: item.channelTitle,
+                        });
+                      }}
+                    >
+                      ▶ Play
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="text-xs text-center opacity-60 mt-2">
+            Powered by YouTube
+          </div>
         </div>
-        <div className="text-xs text-center opacity-60 mt-2">
-          Powered by YouTube
-        </div>
-      </div>
       </Popup>
     </>
   );
 };
 import dynamic from "next/dynamic";
 import {
-  LucideType,
   LucideImage,
   LucideStars,
   LucideSmile,
   LucideMusic,
-  LucidePalette,
   LucideHeart,
-  LucideCandy,
-  LucideFlower,
   LucideSun,
   LucideMusic4,
   LucideCake,
   LucideRainbow,
-  LucideMonitor,
   LucideCamera,
   LucideDisc,
   LucideClock,
   LucideBrush,
   LucideSword,
-  LucideSparkles,
   LucideCloud,
   LucideGhost,
   LucideMusic2,
   LucideMoon,
   LucidePen,
   LucideGamepad,
-  LucideVault,
   RotateCw,
   Trash2,
-  LucideText,
-  FileText as LucideFileText,
-  StickyNote as LucideStickyNote,
-  Book as LucideBook,
 } from "lucide-react";
 import clsx from "clsx";
 const Popup = dynamic(() => import("reactjs-popup"), { ssr: false });
@@ -685,104 +600,149 @@ const Popup = dynamic(() => import("reactjs-popup"), { ssr: false });
 
 type Theme = "neutral" | "kawaii" | "retro" | "anime";
 
-// Shared tokens for theme-aware styling (buttons, hover, panels)
-const buttonClass = (theme: Theme) =>
-  `p-3 rounded-full flex items-center justify-center transition ${
-    theme === "neutral"
-      ? "bg-white text-black"
-      : theme === "kawaii"
-      ? "bg-pink-200 text-pink-800"
-      : theme === "retro"
-      ? "bg-yellow-200 text-brown-800"
-      : "bg-purple-200 text-purple-800"
-  }`;
+type CanvasBackgroundState = {
+  color?: string;
+  pattern?: string;
+  image?: string;
+  texture?: string;
+};
 
-const hoverFX = (theme: Theme) => {
-  const common = "relative transition-all duration-300 will-change-transform";
-  switch (theme) {
-    case "neutral":
-      return `${common} hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.15)] after:content-[''] after:absolute after:inset-0 after:rounded-full after:ring-1 after:ring-black/5 after:opacity-0 hover:after:opacity-100 after:transition-opacity`;
-    case "kawaii":
-      return `${common} hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(255,105,180,0.35)] after:content-[''] after:absolute after:-inset-1 after:rounded-full after:bg-[radial-gradient(ellipse_at_center,rgba(255,182,193,0.45),transparent_60%)] after:opacity-0 hover:after:opacity-100 after:blur-sm after:transition-opacity`;
-    case "retro":
-      return `${common} hover:-translate-y-[3px] hover:translate-x-[3px] hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.25)]`;
-    case "anime":
-      return `${common} hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(99,102,241,0.45)] before:content-[''] before:absolute before:inset-[-2px] before:rounded-full before:opacity-0 before:ring-2 before:ring-current hover:before:opacity-100 before:transition-all`;
-    default:
-      return common;
+export type CanvasSnapshot = {
+  version: number;
+  theme: Theme;
+  background: CanvasBackgroundState;
+  textElements: TextElement[];
+  stickyNotes: StickyNoteElement[];
+  imageElements: ImageElement[];
+  stickerElements: StickerElement[];
+  audioElements: AudioElement[];
+  globalAudio: {
+    videoId: string;
+    title: string;
+    thumbnail?: string;
+    channelTitle?: string;
+    artist?: string;
+  } | null;
+  updatedAt: number;
+};
+
+type CanvasSnapshotComparable = Omit<CanvasSnapshot, "updatedAt">;
+
+const SNAPSHOT_VERSION = 1;
+
+const allowedThemes: Theme[] = ["neutral", "kawaii", "retro", "anime"];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const coerceBackgroundState = (value: unknown): CanvasBackgroundState => {
+  if (!isRecord(value)) return {};
+  const result: CanvasBackgroundState = {};
+  if (typeof value.color === "string") result.color = value.color;
+  if (typeof value.pattern === "string") result.pattern = value.pattern;
+  if (typeof value.image === "string") result.image = value.image;
+  if (typeof value.texture === "string") result.texture = value.texture;
+  return result;
+};
+
+const coerceGlobalAudio = (
+  value: unknown
+): CanvasSnapshot["globalAudio"] => {
+  if (!isRecord(value)) return null;
+  const { videoId, title, thumbnail, channelTitle, artist } = value;
+  if (typeof videoId !== "string" || typeof title !== "string") return null;
+  return {
+    videoId,
+    title,
+    thumbnail: typeof thumbnail === "string" ? thumbnail : undefined,
+    channelTitle:
+      typeof channelTitle === "string" ? channelTitle : undefined,
+    artist: typeof artist === "string" ? artist : undefined,
+  };
+};
+
+const arrayOrEmpty = <T,>(value: unknown): T[] =>
+  Array.isArray(value) ? (value as T[]) : [];
+
+const buildComparablePayload = (data: {
+  theme: Theme;
+  background: CanvasBackgroundState;
+  textElements: TextElement[];
+  stickyNotes: StickyNoteElement[];
+  imageElements: ImageElement[];
+  stickerElements: StickerElement[];
+  audioElements: AudioElement[];
+  globalAudio: CanvasSnapshot["globalAudio"];
+}): CanvasSnapshotComparable => ({
+  version: SNAPSHOT_VERSION,
+  theme: data.theme,
+  background: data.background,
+  textElements: data.textElements,
+  stickyNotes: data.stickyNotes,
+  imageElements: data.imageElements,
+  stickerElements: data.stickerElements,
+  audioElements: data.audioElements,
+  globalAudio: data.globalAudio,
+});
+
+const serializeComparable = (payload: CanvasSnapshotComparable) =>
+  JSON.stringify(payload);
+
+const normalizeSnapshot = (value: unknown): CanvasSnapshot | null => {
+  if (!isRecord(value)) return null;
+  const theme =
+    typeof value.theme === "string" &&
+    allowedThemes.includes(value.theme as Theme)
+      ? (value.theme as Theme)
+      : "neutral";
+  const background = coerceBackgroundState(value.background);
+  const textElements = arrayOrEmpty<TextElement>(value.textElements);
+  const stickyNotes = arrayOrEmpty<StickyNoteElement>(value.stickyNotes);
+  const imageElements = arrayOrEmpty<ImageElement>(value.imageElements);
+  const stickerElements = arrayOrEmpty<StickerElement>(value.stickerElements);
+  const audioElements = arrayOrEmpty<AudioElement>(value.audioElements);
+  const globalAudio = coerceGlobalAudio(value.globalAudio);
+
+  const updatedAt =
+    typeof value.updatedAt === "number" && Number.isFinite(value.updatedAt)
+      ? value.updatedAt
+      : Date.now();
+
+  return {
+    version: SNAPSHOT_VERSION,
+    theme,
+    background,
+    textElements,
+    stickyNotes,
+    imageElements,
+    stickerElements,
+    audioElements,
+    globalAudio,
+    updatedAt,
+  };
+};
+
+const parseInitialBackground = (
+  value?: string
+): CanvasBackgroundState => {
+  if (!value) return {};
+  const trimmed = value.trim();
+  if (!trimmed) return {};
+  const lower = trimmed.toLowerCase();
+  const isImage =
+    lower.startsWith("url(") ||
+    lower.includes("gradient(") ||
+    lower.includes("gradient ");
+  if (isImage) {
+    return { image: trimmed };
   }
-};
-
-const panelThemeClass = (theme: Theme) =>
-  theme === "neutral"
-    ? "bg-white text-black"
-    : theme === "kawaii"
-    ? "bg-pink-100 text-pink-800"
-    : theme === "retro"
-    ? "bg-yellow-100 text-yellow-800"
-    : "bg-purple-100 text-purple-800";
-
-// Theme → icon mapping specifically for the Background tool
-const backgroundIconByTheme: Record<
-  Theme,
-  React.ComponentType<{ size?: number }>
-> = {
-  neutral: LucidePalette, // 🎨
-  kawaii: LucideFlower, // 🌸
-  retro: LucideText, // 🖥️
-  anime: LucideSparkles, // ✨
-};
-
-// Theme → icon mapping for the "Add Text" button
-const textIconByTheme: Record<Theme, React.ComponentType<{ size?: number }>> = {
-  neutral: LucideType,
-  kawaii: LucideCandy,
-  retro: LucideMonitor,
-  anime: LucidePen,
-};
-
-// Theme → icon mapping for the Sticky Note button
-const stickyNoteIconByTheme: Record<
-  Theme,
-  React.ComponentType<{ size?: number }>
-> = {
-  neutral: LucideStickyNote,
-  kawaii: LucideHeart,
-  retro: LucideFileText,
-  anime: LucideBook,
-};
-
-// Theme → icon mapping for the Audio tool
-const audioIconByTheme: Record<
-  Theme,
-  React.ComponentType<{ size?: number }>
-> = {
-  neutral: LucideMusic,
-  kawaii: LucideMusic4,
-  retro: LucideDisc,
-  anime: LucideMusic2,
-};
-
-// Theme → icon mapping for the Music tool (mic/recording)
-import {
-  LucideMic,
-  LucideMic2,
-  LucideMicVocal,
-  LucideMicOff,
-} from "lucide-react";
-const musicIconByTheme: Record<
-  Theme,
-  React.ComponentType<{ size?: number }>
-> = {
-  neutral: LucideMic,
-  kawaii: LucideMic2,
-  retro: LucideMicVocal,
-  anime: LucideMicOff,
+  return { color: trimmed };
 };
 
 type CanvasBoardProps = {
   storageKey: string;
   initialBackground?: string;
+  onSnapshotChange?: (snapshot: CanvasSnapshot) => void;
 };
 
 // Only unique, non-background, non-text icons for each theme:
@@ -829,23 +789,30 @@ type ThemeSelectorProps = {
 const ThemeSelector: React.FC<ThemeSelectorProps> = ({ theme, setTheme }) => {
   const [open, setOpen] = React.useState(false);
 
-  const themes: Theme[] = ["neutral", "kawaii", "retro", "anime"];
-
-  const themeIcons = {
-    neutral: LucidePalette,
-    kawaii: LucideHeart,
-    retro: LucideMonitor,
-    anime: LucideSparkles,
+  // ✅ Labels for themes (for nicer display text)
+  const themeLabels: Record<Theme, string> = {
+    neutral: "Neutral",
+    kawaii: "Kawaii",
+    retro: "Retro",
+    anime: "Anime",
   };
 
-  const CurrentIcon = themeIcons[theme];
+  // ✅ Array of all themes to loop over
+  const themes: Theme[] = ["neutral", "kawaii", "retro", "anime"];
+
+  // ✅ Current theme’s icon
+  const CurrentIcon = themeConfig[theme].backgroundIcon;
 
   return (
     <Popup
       trigger={
         <button
           aria-label="Select theme"
-          className="flex items-center justify-center rounded-full p-3 shadow bg-white"
+          className={clsx(
+            "flex items-center justify-center rounded-full p-3 shadow transition",
+            themeConfig[theme].button,
+            themeConfig[theme].hover
+          )}
         >
           <CurrentIcon size={18} />
         </button>
@@ -865,29 +832,30 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ theme, setTheme }) => {
       <div
         className={clsx(
           "flex flex-col gap-2 p-2 rounded-lg",
-          theme === "neutral" && "bg-white text-black",
-          theme === "kawaii" && "bg-pink-100 text-pink-800",
-          theme === "retro" && "bg-yellow-100 text-yellow-800",
-          theme === "anime" && "bg-purple-100 text-purple-800"
+          themeConfig[theme].panel
         )}
       >
-        {themes.map((t) => (
-          <button
-            key={t}
-            onClick={() => {
-              setTheme(t);
-              setOpen(false);
-            }}
-            className={clsx(
-              "px-4 py-2 rounded text-left text-sm font-medium transition text-ink",
-              theme === t
-                ? "bg-[var(--k-primary)] text-ink"
-                : "hover:bg-primary hover:text-white"
-            )}
-          >
-            {t}
-          </button>
-        ))}
+        {themes.map((t) => {
+          const OptionIcon = themeConfig[t].backgroundIcon;
+          const isActive = theme === t;
+          return (
+            <button
+              key={t}
+              onClick={() => {
+                setTheme(t);
+                setOpen(false);
+              }}
+              className={clsx(
+                "flex items-center gap-2 px-4 py-2 rounded text-left text-sm font-medium transition",
+                isActive ? themeConfig[t].button : themeConfig[t].panel,
+                !isActive && themeConfig[t].hover
+              )}
+            >
+              <OptionIcon size={16} />
+              {themeLabels[t]} {/* 👈 Display nice label */}
+            </button>
+          );
+        })}
       </div>
     </Popup>
   );
@@ -916,6 +884,27 @@ const BackgroundPopup: React.FC<
   BackgroundPopupProps & { onAddImage?: (src: string) => void }
 > = ({ setBackground, background, theme, onAddImage }) => {
   const [open, setOpen] = React.useState(false);
+  const BackgroundIcon = themeConfig[theme].backgroundIcon;
+  const triggerButtonClass = clsx(
+    "flex items-center justify-center rounded-full p-3 transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
+  const primaryActionClass = clsx(
+    "rounded px-3 py-1 transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
+  const neutralActionClass = clsx(
+    "rounded px-3 py-1 transition border border-[var(--color-border-subtle)]",
+    themeConfig[theme].panel,
+    themeConfig[theme].hover
+  );
+  const tileButtonClass = clsx(
+    "w-12 h-12 rounded border-2 border-transparent transition",
+    themeConfig[theme].panel,
+    themeConfig[theme].hover
+  );
 
   const presetColors = [
     "#ffffff",
@@ -992,11 +981,8 @@ const BackgroundPopup: React.FC<
   return (
     <Popup
       trigger={
-        <button
-          aria-label="Select background"
-          className={clsx(buttonClass(theme), hoverFX(theme))}
-        >
-          {React.createElement(backgroundIconByTheme[theme], { size: 18 })}
+        <button aria-label="Select background" className={triggerButtonClass}>
+          <BackgroundIcon size={18} />
         </button>
       }
       position="top center"
@@ -1015,7 +1001,7 @@ const BackgroundPopup: React.FC<
       <div
         className={clsx(
           "flex flex-col gap-4 p-2 rounded-lg",
-          panelThemeClass(theme)
+          themeConfig[theme].panel
         )}
       >
         {/* Solid Color */}
@@ -1050,10 +1036,12 @@ const BackgroundPopup: React.FC<
             <button
               onClick={() => onPatternChange(undefined)}
               className={clsx(
-                "w-12 h-12 rounded border-2 border-transparent flex items-center justify-center text-red-600 text-xl font-bold cursor-pointer",
+                tileButtonClass,
+                "flex items-center justify-center text-xl font-bold",
                 background.pattern === undefined
-                  ? "border-black"
-                  : "hover:border-gray-400"
+                  ? "border-[var(--color-border-emphasis)]"
+                  : "hover:border-[var(--color-border-emphasis)]",
+                "text-[var(--color-ink-strong)]"
               )}
               title="None"
             >
@@ -1064,10 +1052,10 @@ const BackgroundPopup: React.FC<
                 key={name}
                 onClick={() => onPatternChange(style)}
                 className={clsx(
-                  "w-12 h-12 rounded border-2 border-transparent",
+                  tileButtonClass,
                   background.pattern === style
-                    ? "border-black"
-                    : "hover:border-gray-400"
+                    ? "border-[var(--color-border-emphasis)]"
+                    : "hover:border-[var(--color-border-emphasis)]"
                 )}
                 title={name}
                 style={{
@@ -1088,7 +1076,7 @@ const BackgroundPopup: React.FC<
             <button
               type="button"
               onClick={triggerFileInput}
-              className="rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600 transition"
+              className={primaryActionClass}
             >
               Upload Image
             </button>
@@ -1097,7 +1085,7 @@ const BackgroundPopup: React.FC<
               onClick={() =>
                 setBackground((prev) => ({ ...prev, image: undefined }))
               }
-              className="rounded border border-red-500 text-red-500 px-3 py-1 hover:bg-red-100 transition"
+              className={neutralActionClass}
               title="Remove Image"
             >
               ❌
@@ -1119,10 +1107,12 @@ const BackgroundPopup: React.FC<
             <button
               onClick={() => onTextureChange(undefined)}
               className={clsx(
-                "px-3 py-1 rounded border-2 border-transparent text-xs text-red-600 font-bold cursor-pointer",
+                neutralActionClass,
+                "text-xs font-bold",
                 background.texture === undefined
-                  ? "border-black"
-                  : "hover:border-gray-400"
+                  ? "border-[var(--color-border-emphasis)]"
+                  : "hover:border-[var(--color-border-emphasis)]",
+                "text-[var(--color-ink-strong)]"
               )}
               title="None"
             >
@@ -1133,10 +1123,11 @@ const BackgroundPopup: React.FC<
                 key={name}
                 onClick={() => onTextureChange(style)}
                 className={clsx(
-                  "px-3 py-1 rounded border-2 border-transparent text-xs",
+                  neutralActionClass,
+                  "text-xs",
                   background.texture === style
-                    ? "border-black"
-                    : "hover:border-gray-400"
+                    ? "border-[var(--color-border-emphasis)]"
+                    : "hover:border-[var(--color-border-emphasis)]"
                 )}
                 title={name}
                 style={{
@@ -1153,7 +1144,7 @@ const BackgroundPopup: React.FC<
 
         <button
           onClick={resetBackground}
-          className="mt-2 rounded bg-red-500 px-3 py-1 text-white hover:bg-red-600 transition"
+          className={clsx("mt-2", primaryActionClass)}
         >
           Reset Background
         </button>
@@ -1170,7 +1161,7 @@ type AudioPopupProps = {
 const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
   const [open, setOpen] = React.useState(false);
   // Use the music icon for toolbar trigger and modal
-  const MusicIcon = musicIconByTheme[theme];
+  const MusicIcon = themeConfig[theme].micIcon;
   // Recording state and refs for MediaRecorder
   const [isRecording, setIsRecording] = React.useState(false);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
@@ -1210,7 +1201,11 @@ const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
       trigger={
         <button
           aria-label="Add music"
-          className={clsx(buttonClass(theme), hoverFX(theme))}
+          className={clsx(
+            "flex items-center justify-center rounded-full p-3 transition",
+            themeConfig[theme].button,
+            themeConfig[theme].hover
+          )}
           type="button"
         >
           <MusicIcon size={18} />
@@ -1232,23 +1227,18 @@ const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
       <div
         className={clsx(
           "flex flex-col items-center justify-center gap-3 p-4 rounded-lg",
-          panelThemeClass(theme)
+          themeConfig[theme].panel
         )}
       >
         <button
           type="button"
           onClick={handleMicClick}
           className={clsx(
-            "rounded-full w-16 h-16 flex items-center justify-center",
-            isRecording
-              ? "bg-red-500 hover:bg-red-600 text-white"
-              : theme === "neutral"
-              ? "bg-gray-200 hover:bg-gray-300 text-black"
-              : theme === "kawaii"
-              ? "bg-pink-200 hover:bg-pink-300 text-pink-800"
-              : theme === "retro"
-              ? "bg-yellow-200 hover:bg-yellow-300 text-yellow-800"
-              : "bg-purple-200 hover:bg-purple-300 text-purple-800"
+            "rounded-full w-16 h-16 flex items-center justify-center transition",
+            themeConfig[theme].button,
+            themeConfig[theme].hover,
+            isRecording &&
+              "ring-4 ring-[var(--color-primary)] animate-pulse text-[var(--color-ink)]"
           )}
           title={isRecording ? "Stop recording" : "Record audio"}
         >
@@ -1260,21 +1250,30 @@ const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
   );
 };
 
-const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
+const CanvasBoard: React.FC<CanvasBoardProps> = ({
+  storageKey,
+  initialBackground,
+  onSnapshotChange,
+}) => {
   // --- Global floating audio player state ---
-  const [globalAudio, setGlobalAudio] = React.useState<{ videoId: string; title: string; thumbnail?: string; channelTitle?: string; artist?: string } | null>(null);
+  const [globalAudio, setGlobalAudio] = React.useState<{
+    videoId: string;
+    title: string;
+    thumbnail?: string;
+    channelTitle?: string;
+    artist?: string;
+  } | null>(null);
   const [theme, setTheme] = React.useState<Theme>("neutral");
-  const [background, setBackground] = React.useState<{
-    color?: string;
-    pattern?: string;
-    image?: string;
-    texture?: string;
-  }>({});
+  const [background, setBackground] =
+    React.useState<CanvasBackgroundState>({});
+  const [isHydrated, setIsHydrated] = React.useState(false);
+  const snapshotComparableRef = React.useRef<string | null>(null);
 
   // Text elements state
   const [textElements, setTextElements] = React.useState<TextElement[]>([]);
   // Sticky notes state
-  const [stickyNotes, setStickyNotes] = React.useState<StickyNoteElement[]>([]);
+  const [stickyNotes, setStickyNotes] =
+    React.useState<StickyNoteElement[]>([]);
   const [selectedStickyId, setSelectedStickyId] = React.useState<string | null>(
     null
   );
@@ -1713,7 +1712,8 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
     if (selectedStickerId === id) setSelectedStickerId(null);
   };
   // --- Audio elements state and handlers ---
-  const [audioElements, setAudioElements] = React.useState<AudioElement[]>([]);
+  const [audioElements, setAudioElements] =
+    React.useState<AudioElement[]>([]);
   const [selectedAudioId, setSelectedAudioId] = React.useState<string | null>(
     null
   );
@@ -1896,34 +1896,43 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
     null
   );
 
+  const injectedDefaultsRef = React.useRef(false);
+  // Preload default YouTube tracks if canvas has none after hydration
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {
-      /* ignore storage errors during reset */
-    }
-  }, [storageKey]);
+    if (!isHydrated) return;
+    if (injectedDefaultsRef.current) return;
+    if (audioElements.length > 0) return;
 
-  // Preload default YouTube tracks on mount if audioElements is empty
+    const defaults = [
+      { videoId: "n61ULEU7CO0", title: "Best of Lofi Hip Hop 2021" },
+      { videoId: "qSqqvhjNet4", title: "Romantic Lofi Mashup" },
+      { videoId: "t8yVk0bm684", title: "1 Hour Hindi Lofi Songs" },
+      { videoId: "zzclUJ5oxns", title: "Bolero Lofi Classics" },
+      { videoId: "pVXKoic5vL0", title: "Lost in Midnight Glow" },
+    ].map(({ videoId, title }, index) => ({
+      id: `audio-default-${index}`,
+      src: `https://www.youtube.com/embed/${videoId}?autoplay=0`,
+      title,
+      artist: undefined,
+      x: 300 + index * 30,
+      y: 200 + index * 30,
+      zIndex: 100 + index,
+      playing: false,
+    }));
+
+    setAudioElements(defaults);
+    injectedDefaultsRef.current = true;
+    console.debug("[CanvasBoard] Injected default audio tracks", {
+      storageKey,
+      count: defaults.length,
+    });
+  }, [audioElements.length, isHydrated, setAudioElements, storageKey]);
   useEffect(() => {
-    if (audioElements.length === 0) {
-      const defaults = [
-        { videoId: "n61ULEU7CO0", title: "Best of Lofi Hip Hop 2021" },
-        { videoId: "qSqqvhjNet4", title: "Romantic Lofi Mashup" },
-        { videoId: "t8yVk0bm684", title: "1 Hour Hindi Lofi Songs" },
-        { videoId: "zzclUJ5oxns", title: "Bolero Lofi Classics" },
-        { videoId: "pVXKoic5vL0", title: "Lost in Midnight Glow" },
-      ];
-      defaults.forEach(({ videoId, title }) => {
-        const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0`;
-        addAudioElement(embedUrl, title);
-      });
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", theme);
+      console.log("Theme applied:", theme);
     }
-    // Only run on mount and when audioElements changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  }, [theme]);
   // Handler to update properties of the selected text element
   const updateSelectedText = (updates: Partial<TextElement>) => {
     setTextElements((prev) =>
@@ -1938,28 +1947,186 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ storageKey }) => {
   };
 
   const CurrentIcons = iconSets[theme];
+  const backgroundIconComponent = themeConfig[theme].backgroundIcon;
+  const textIconComponent = themeConfig[theme].textIcon;
+  const TextIcon = textIconComponent;
+  const StickyIcon = themeConfig[theme].stickyIcon;
+  const toolbarButtonClass = clsx(
+    "flex items-center justify-center rounded-full p-3 transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
+  const toolbarSmallButton = clsx(
+    "px-2 py-1 rounded text-xs transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
+  const toolbarSmallGhost = clsx(
+    "px-2 py-1 rounded text-xs transition border border-[var(--color-border-subtle)]",
+    themeConfig[theme].panel,
+    themeConfig[theme].hover
+  );
+  const floatingToolbarClass = clsx(
+    "absolute left-1/2 -translate-x-1/2 -top-12 z-50 flex gap-2 items-center rounded shadow-lg border border-[var(--color-border-subtle)] p-2",
+    themeConfig[theme].panel
+  );
   // Exclude both background and text icons for this theme
   const filteredIcons = CurrentIcons.filter(
-    (Icon) =>
-      Icon !== backgroundIconByTheme[theme] && Icon !== textIconByTheme[theme]
+    (Icon) => Icon !== backgroundIconComponent && Icon !== textIconComponent
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    console.debug("[CanvasBoard] Hydrating snapshot", { storageKey });
+    let snapshotToEmit: CanvasSnapshot | null = null;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      console.debug("[CanvasBoard] Loaded raw snapshot", {
+        storageKey,
+        hasRaw: Boolean(raw),
+      });
+      if (raw) {
+        const parsed = normalizeSnapshot(JSON.parse(raw));
+        if (parsed) {
+          setTheme(parsed.theme);
+          setBackground(parsed.background);
+          setTextElements(parsed.textElements);
+          setStickyNotes(parsed.stickyNotes);
+          setImageElements(parsed.imageElements);
+          setStickerElements(parsed.stickerElements);
+          setAudioElements(parsed.audioElements);
+          setGlobalAudio(parsed.globalAudio);
+          const comparable = buildComparablePayload({
+            theme: parsed.theme,
+            background: parsed.background,
+            textElements: parsed.textElements,
+            stickyNotes: parsed.stickyNotes,
+            imageElements: parsed.imageElements,
+            stickerElements: parsed.stickerElements,
+            audioElements: parsed.audioElements,
+            globalAudio: parsed.globalAudio,
+          });
+          snapshotComparableRef.current = serializeComparable(comparable);
+          snapshotToEmit = parsed;
+          console.debug("[CanvasBoard] Restored snapshot", {
+            storageKey,
+            updatedAt: parsed.updatedAt,
+            textCount: parsed.textElements.length,
+            stickyCount: parsed.stickyNotes.length,
+            imageCount: parsed.imageElements.length,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to restore canvas snapshot", error);
+    }
+
+    if (!snapshotToEmit) {
+      const fallbackBackground = parseInitialBackground(initialBackground);
+      if (Object.keys(fallbackBackground).length > 0) {
+        setBackground(fallbackBackground);
+      }
+      const comparable = buildComparablePayload({
+        theme: "neutral",
+        background: fallbackBackground,
+        textElements: [],
+        stickyNotes: [],
+        imageElements: [],
+        stickerElements: [],
+        audioElements: [],
+        globalAudio: null,
+      });
+      snapshotComparableRef.current = serializeComparable(comparable);
+      snapshotToEmit = {
+        ...comparable,
+        updatedAt: Date.now(),
+      };
+      console.debug("[CanvasBoard] Using fallback snapshot", {
+        storageKey,
+        fallbackBackground,
+      });
+    }
+
+    setIsHydrated(true);
+    if (snapshotToEmit && onSnapshotChange) {
+      onSnapshotChange(snapshotToEmit);
+    }
+  }, [initialBackground, onSnapshotChange, storageKey]);
+
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+
+    const comparable = buildComparablePayload({
+      theme,
+      background,
+      textElements,
+      stickyNotes,
+      imageElements,
+      stickerElements,
+      audioElements,
+      globalAudio,
+    });
+
+    const serializedComparable = serializeComparable(comparable);
+    if (snapshotComparableRef.current === serializedComparable) return;
+
+    const timeout = window.setTimeout(() => {
+      const snapshot: CanvasSnapshot = {
+        ...comparable,
+        updatedAt: Date.now(),
+      };
+      snapshotComparableRef.current = serializedComparable;
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(snapshot));
+      } catch (error) {
+        console.error("Failed to persist canvas snapshot", error);
+      }
+      onSnapshotChange?.(snapshot);
+      console.debug("[CanvasBoard] Persisted snapshot", {
+        storageKey,
+        updatedAt: snapshot.updatedAt,
+        textCount: snapshot.textElements.length,
+        stickyCount: snapshot.stickyNotes.length,
+        imageCount: snapshot.imageElements.length,
+      });
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    audioElements,
+    background,
+    globalAudio,
+    imageElements,
+    isHydrated,
+    onSnapshotChange,
+    stickerElements,
+    storageKey,
+    stickyNotes,
+    textElements,
+    theme,
+  ]);
 
   // Find the selected text element
   const selectedText = textElements.find((el) => el.id === selectedTextId);
   // Find the selected image element
   const selectedImage = imageElements.find((el) => el.id === selectedImageId);
 
-// Toolbar buttons
-// Build toolbar buttons, inserting Music tool before Delete/Trash
-const toolbarButtons = [
-  // ...other tool buttons...
-  // We'll assemble them in the render below.
-];
-// Duplicate definition of MusicSearchPopup removed.
+  // Toolbar buttons
+  // Build toolbar buttons, inserting Music tool before Delete/Trash
+  const toolbarButtons = [
+    // ...other tool buttons...
+    // We'll assemble them in the render below.
+  ];
+  // Duplicate definition of MusicSearchPopup removed.
 
   return (
     <div
-      className="relative flex h-full w-full flex-col items-center justify-center gap-4 border-neutral-300 p-8 text-center text-neutral-500"
+      className={clsx(
+        "relative flex h-full w-full flex-col items-center justify-center gap-4 p-8 text-center ",
+        themeConfig[theme].panel
+      )}
+      style={{ backgroundColor: "var(--color-background)" }}
       onClick={() => {
         setSelectedTextId(null);
         setSelectedImageId(null);
@@ -2018,7 +2185,11 @@ const toolbarButtons = [
       )}
       <div className="absolute top-4 right-4 flex gap-2">
         <ThemeSelector theme={theme} setTheme={setTheme} />
-        <MusicSearchPopup theme={theme} addAudioElement={addAudioElement} setGlobalAudio={setGlobalAudio} />
+        <MusicSearchPopup
+          theme={theme}
+          addAudioElement={addAudioElement}
+          setGlobalAudio={setGlobalAudio}
+        />
       </div>
       <p className="text-lg font-semibold">Canvas board reset</p>
       <p className="text-sm">
@@ -2067,7 +2238,7 @@ const toolbarButtons = [
               {/* Floating toolbar */}
               {isSelected && (
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 -top-12 z-50 flex gap-2 items-center bg-white shadow-lg rounded p-2 border border-gray-200"
+                  className={floatingToolbarClass}
                   style={{
                     minWidth: 220,
                     whiteSpace: "nowrap",
@@ -2110,8 +2281,8 @@ const toolbarButtons = [
                   {/* Bold */}
                   <button
                     className={clsx(
-                      "px-2 py-1 rounded font-bold text-xs",
-                      el.bold ? "bg-blue-200" : "bg-gray-100"
+                      el.bold ? toolbarSmallButton : toolbarSmallGhost,
+                      "font-bold"
                     )}
                     onClick={() =>
                       updateStickyNoteById(el.id, { bold: !el.bold })
@@ -2123,7 +2294,7 @@ const toolbarButtons = [
                   </button>
                   {/* Rotate */}
                   <button
-                    className="px-2 py-1 rounded text-xs bg-gray-100"
+                    className={toolbarSmallGhost}
                     onClick={() =>
                       updateStickyNoteById(el.id, {
                         rotation: el.rotation + 10,
@@ -2136,7 +2307,7 @@ const toolbarButtons = [
                   </button>
                   {/* Insert bullet pointer */}
                   <button
-                    className="px-2 py-1 rounded text-xs bg-gray-100"
+                    className={toolbarSmallGhost}
                     onClick={() => {
                       // Insert bullet at caret or at start if not focused
                       // For simplicity, just prepend "• " to the text
@@ -2153,7 +2324,7 @@ const toolbarButtons = [
                   </button>
                   {/* Delete */}
                   <button
-                    className="px-2 py-1 rounded text-xs bg-red-100 hover:bg-red-300 text-red-700"
+                    className={clsx(toolbarSmallButton, "font-semibold")}
                     title="Delete"
                     type="button"
                     onClick={() => deleteStickyNoteById(el.id)}
@@ -2426,7 +2597,7 @@ const toolbarButtons = [
                     title="Drag to resize"
                   >
                     <div
-                      className="rounded-full border border-blue-400 bg-white hover:bg-blue-200 shadow"
+                      className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] shadow transition hover:bg-[var(--color-surface-raised)]"
                       style={{
                         width: 14,
                         height: 14,
@@ -2456,7 +2627,7 @@ const toolbarButtons = [
                     title="Drag to rotate"
                   >
                     <div
-                      className="rounded-full border border-blue-400 bg-white hover:bg-blue-200 shadow"
+                      className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] shadow transition hover:bg-[var(--color-surface-raised)]"
                       style={{
                         width: 14,
                         height: 14,
@@ -2466,7 +2637,10 @@ const toolbarButtons = [
                         fontSize: 10,
                       }}
                     >
-                      <RotateCw size={10} className="text-blue-500" />
+                      <RotateCw
+                        size={10}
+                        className="text-[var(--color-primary)]"
+                      />
                     </div>
                   </div>
                 )}
@@ -2483,6 +2657,7 @@ const toolbarButtons = [
                     replaceSrc={(src: string) =>
                       updateImageElementById(el.id, { src })
                     }
+                    theme={theme}
                   />
                 )}
               </div>
@@ -2536,7 +2711,7 @@ const toolbarButtons = [
                     ev.stopPropagation();
                     deleteTextElementById(el.id);
                   }}
-                  className="absolute -top-3 -right-3 z-20 bg-white border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-red-100 hover:text-red-700 shadow"
+                  className="absolute -top-3 -right-3 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] text-[var(--color-ink)] shadow transition hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-primary)]"
                   title="Delete text"
                   tabIndex={0}
                   style={{ fontSize: 16, lineHeight: 1 }}
@@ -2704,7 +2879,10 @@ const toolbarButtons = [
               {/* Popup toolbar for selected text */}
               {selectedText && selectedText.id === el.id && (
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 -top-16 z-10 flex gap-2 items-center bg-white shadow-lg rounded p-2 border border-gray-200"
+                  className={clsx(
+                    "absolute left-1/2 -translate-x-1/2 -top-16 z-10 flex gap-2 items-center rounded p-2 shadow-lg border border-[var(--color-border-subtle)]",
+                    themeConfig[theme].panel
+                  )}
                   style={{
                     minWidth: 260,
                     whiteSpace: "nowrap",
@@ -2758,8 +2936,10 @@ const toolbarButtons = [
                   {/* Bold */}
                   <button
                     className={clsx(
-                      "px-2 py-1 rounded font-bold text-xs",
-                      selectedText.bold ? "bg-blue-200" : "bg-gray-100"
+                      selectedText.bold
+                        ? toolbarSmallButton
+                        : toolbarSmallGhost,
+                      "font-bold"
                     )}
                     style={{ fontFamily: "Inter, Arial, sans-serif" }}
                     onClick={() =>
@@ -2773,8 +2953,10 @@ const toolbarButtons = [
                   {/* Italic */}
                   <button
                     className={clsx(
-                      "px-2 py-1 rounded italic text-xs",
-                      selectedText.italic ? "bg-blue-200" : "bg-gray-100"
+                      selectedText.italic
+                        ? toolbarSmallButton
+                        : toolbarSmallGhost,
+                      "italic"
                     )}
                     style={{ fontFamily: "Inter, Arial, sans-serif" }}
                     onClick={() =>
@@ -2792,10 +2974,9 @@ const toolbarButtons = [
                   >
                     <button
                       className={clsx(
-                        "px-2 py-1 rounded text-xs",
                         selectedText.align === "left"
-                          ? "bg-blue-200"
-                          : "bg-gray-100"
+                          ? toolbarSmallButton
+                          : toolbarSmallGhost
                       )}
                       style={{ fontFamily: "Inter, Arial, sans-serif" }}
                       onClick={() => updateSelectedText({ align: "left" })}
@@ -2806,10 +2987,9 @@ const toolbarButtons = [
                     </button>
                     <button
                       className={clsx(
-                        "px-2 py-1 rounded text-xs",
                         selectedText.align === "center"
-                          ? "bg-blue-200"
-                          : "bg-gray-100"
+                          ? toolbarSmallButton
+                          : toolbarSmallGhost
                       )}
                       style={{ fontFamily: "Inter, Arial, sans-serif" }}
                       onClick={() => updateSelectedText({ align: "center" })}
@@ -2820,10 +3000,9 @@ const toolbarButtons = [
                     </button>
                     <button
                       className={clsx(
-                        "px-2 py-1 rounded text-xs",
                         selectedText.align === "right"
-                          ? "bg-blue-200"
-                          : "bg-gray-100"
+                          ? toolbarSmallButton
+                          : toolbarSmallGhost
                       )}
                       style={{ fontFamily: "Inter, Arial, sans-serif" }}
                       onClick={() => updateSelectedText({ align: "right" })}
@@ -2835,7 +3014,7 @@ const toolbarButtons = [
                   </div>
                   {/* Insert bullet pointer */}
                   <button
-                    className="px-2 py-1 rounded text-xs bg-gray-100"
+                    className={toolbarSmallGhost}
                     onClick={() => {
                       // Insert bullet at caret or at start if not focused
                       // For simplicity, just prepend "• " to the text
@@ -2852,7 +3031,7 @@ const toolbarButtons = [
                   </button>
                   {/* Delete */}
                   <button
-                    className="px-2 py-1 rounded text-xs bg-red-100 hover:bg-red-300 text-red-700"
+                    className={clsx(toolbarSmallButton, "font-semibold")}
                     style={{ fontFamily: "Inter, Arial, sans-serif" }}
                     title="Delete"
                     type="button"
@@ -2875,7 +3054,12 @@ const toolbarButtons = [
           );
         })}
       </div>
-      <div className="absolute bottom-8 flex gap-3 items-center">
+      <div
+        className={clsx(
+          "absolute bottom-8 flex gap-3 items-center transition",
+        )}
+    
+      >
         <BackgroundPopup
           theme={theme}
           setBackground={setBackground}
@@ -2884,21 +3068,22 @@ const toolbarButtons = [
         />
         {/* Always render Add Text button */}
         <button
-          className={clsx(buttonClass(theme), hoverFX(theme))}
+          className={toolbarButtonClass}
           onClick={addTextElement}
           title="Add text"
           type="button"
+       
         >
-          {React.createElement(textIconByTheme[theme], { size: 18 })}
+          <TextIcon size={18} />
         </button>
         {/* Sticky Note button */}
         <button
-          className={clsx(buttonClass(theme), hoverFX(theme))}
+          className={toolbarButtonClass}
           onClick={addStickyNote}
           title="Add sticky note"
           type="button"
         >
-          {React.createElement(stickyNoteIconByTheme[theme], { size: 18 })}
+          <StickyIcon size={18} />
         </button>
         {/* Sticker Sheet Button (custom popup) */}
         <StickerSheetButton
@@ -2923,7 +3108,7 @@ const toolbarButtons = [
           // return (
           //   <button
           //     key={index}
-          //     className={clsx(buttonClass(theme), hoverFX(theme))}
+          //     className={clsx(themeConfig[theme].button, themeConfig[theme].hover)}
           //   >
           //     <Icon size={18} />
           //   </button>
@@ -2935,7 +3120,7 @@ const toolbarButtons = [
         <AudioPopup theme={theme} onAddAudio={addAudioElement} />
         {/* Clear canvas button */}
         <button
-          className={clsx(buttonClass(theme), hoverFX(theme))}
+          className={toolbarButtonClass}
           onClick={clearCanvas}
           title="Clear canvas"
           type="button"
@@ -3013,7 +3198,7 @@ const toolbarButtons = [
                   title="Drag to resize"
                 >
                   <div
-                    className="rounded-full border border-pink-400 bg-white hover:bg-pink-200 shadow"
+                    className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] shadow transition hover:bg-[var(--color-surface-raised)]"
                     style={{
                       width: 14,
                       height: 14,
@@ -3043,7 +3228,7 @@ const toolbarButtons = [
                   title="Drag to rotate"
                 >
                   <div
-                    className="rounded-full border border-pink-400 bg-white hover:bg-pink-200 shadow"
+                    className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] shadow transition hover:bg-[var(--color-surface-raised)]"
                     style={{
                       width: 14,
                       height: 14,
@@ -3053,7 +3238,10 @@ const toolbarButtons = [
                       fontSize: 10,
                     }}
                   >
-                    <RotateCw size={10} className="text-pink-500" />
+                    <RotateCw
+                      size={10}
+                      className="text-[var(--color-primary)]"
+                    />
                   </div>
                 </div>
               )}
@@ -3065,7 +3253,7 @@ const toolbarButtons = [
                     ev.stopPropagation();
                     deleteStickerElementById(el.id);
                   }}
-                  className="absolute -top-3 -right-3 z-20 bg-white border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-red-100 hover:text-red-700 shadow"
+                  className="absolute -top-3 -right-3 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] text-[var(--color-ink)] shadow transition hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-primary)]"
                   title="Delete sticker"
                   tabIndex={0}
                   style={{ fontSize: 16, lineHeight: 1 }}
@@ -3078,30 +3266,44 @@ const toolbarButtons = [
         })}
       {/* Global floating audio player */}
       {/* Floating global YouTube player */}
-  {globalAudio && (
-    <div className="fixed bottom-4 left-4 z-50 w-64 bg-white rounded shadow">
-      <div className="flex items-center p-2 gap-2">
-        <img src={globalAudio.thumbnail} className="w-10 h-10 rounded" />
-        <div className="flex-1 truncate text-sm">{globalAudio.title}</div>
-        <button
-          onClick={() => setGlobalAudio(null)}
-          className="ml-auto text-gray-500 hover:text-red-500 rounded p-1 transition"
-          aria-label="Close"
-          type="button"
+      {globalAudio && (
+        <div
+          className={clsx(
+            "fixed bottom-4 left-4 z-50 w-64 rounded shadow border border-[var(--color-border-subtle)]",
+            themeConfig[theme].panel
+          )}
         >
-          ✖
-        </button>
-      </div>
-      <iframe
-        id="yt-player"
-        src={`https://www.youtube.com/embed/${globalAudio.videoId}?autoplay=1`}
-        allow="autoplay; encrypted-media"
-        className="hidden"
-      />
-    </div>
-  )}
+          <div className="flex items-center p-2 gap-2">
+            <img
+              src={globalAudio.thumbnail}
+              className="w-10 h-10 rounded object-cover"
+            />
+            <div className="flex-1 truncate text-sm text-[var(--color-ink-strong)]">
+              {globalAudio.title}
+            </div>
+            <button
+              onClick={() => setGlobalAudio(null)}
+              className={clsx(
+                "ml-auto rounded-full p-1 transition",
+                themeConfig[theme].button,
+                themeConfig[theme].hover
+              )}
+              aria-label="Close"
+              type="button"
+            >
+              ✖
+            </button>
+          </div>
+          <iframe
+            id="yt-player"
+            src={`https://www.youtube.com/embed/${globalAudio.videoId}?autoplay=1`}
+            allow="autoplay; encrypted-media"
+            className="hidden"
+          />
+        </div>
+      )}
 
-{/* {globalAudio && (
+      {/* {globalAudio && (
   <div className="fixed bottom-4 left-4 z-50 w-72 bg-white rounded shadow-lg overflow-hidden">
     <div className="flex items-center p-2 gap-2">
       <img src={globalAudio.thumbnail} alt="" className="w-10 h-10 rounded" />
@@ -3154,6 +3356,7 @@ const ImagePopupToolbar: React.FC<{
   bringForward: () => void;
   sendBackward: () => void;
   replaceSrc: (src: string) => void;
+  theme: Theme;
 }> = ({
   element,
   updateElement,
@@ -3161,6 +3364,7 @@ const ImagePopupToolbar: React.FC<{
   bringForward,
   sendBackward,
   replaceSrc,
+  theme,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const triggerFileInput = () => fileInputRef.current?.click();
@@ -3171,9 +3375,23 @@ const ImagePopupToolbar: React.FC<{
       replaceSrc(url);
     }
   };
+  const toolbarContainerClass = clsx(
+    "absolute left-1/2 -translate-x-1/2 -top-20 z-50 flex gap-2 items-center rounded p-2 shadow-lg border border-[var(--color-border-subtle)]",
+    themeConfig[theme].panel
+  );
+  const toolbarButtonClass = clsx(
+    "px-2 py-1 rounded text-xs transition",
+    themeConfig[theme].panel,
+    themeConfig[theme].hover
+  );
+  const toolbarActiveClass = clsx(
+    "px-2 py-1 rounded text-xs transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
   return (
     <div
-      className="absolute left-1/2 -translate-x-1/2 -top-20 z-50 flex gap-2 items-center bg-white shadow-lg rounded p-2 border border-gray-200"
+      className={toolbarContainerClass}
       style={{
         minWidth: 250,
         whiteSpace: "nowrap",
@@ -3185,10 +3403,7 @@ const ImagePopupToolbar: React.FC<{
       <div className="flex gap-1 items-center">
         <span className="text-xs">Texture</span>
         <button
-          className={clsx(
-            "px-2 py-1 rounded text-xs",
-            !element.texture ? "bg-blue-200" : "bg-gray-100"
-          )}
+          className={!element.texture ? toolbarActiveClass : toolbarButtonClass}
           onClick={() => updateElement({ texture: undefined })}
           title="No texture"
         >
@@ -3198,10 +3413,11 @@ const ImagePopupToolbar: React.FC<{
           <button
             key={name}
             onClick={() => updateElement({ texture: style })}
-            className={clsx(
-              "px-2 py-1 rounded text-xs",
-              element.texture === style ? "bg-blue-200" : "bg-gray-100"
-            )}
+            className={
+              element.texture === style
+                ? toolbarActiveClass
+                : toolbarButtonClass
+            }
             style={{
               backgroundImage: style,
               backgroundSize: "auto",
@@ -3228,25 +3444,25 @@ const ImagePopupToolbar: React.FC<{
       <div className="flex gap-1 items-center">
         <span className="text-xs">Filter</span>
         <button
-          className="px-2 py-1 rounded text-xs bg-gray-100"
+          className={toolbarButtonClass}
           onClick={() => updateElement({ filter: "none" })}
         >
           None
         </button>
         <button
-          className="px-2 py-1 rounded text-xs bg-gray-100"
+          className={toolbarButtonClass}
           onClick={() => updateElement({ filter: "grayscale(100%)" })}
         >
           B/W
         </button>
         <button
-          className="px-2 py-1 rounded text-xs bg-gray-100"
+          className={toolbarButtonClass}
           onClick={() => updateElement({ filter: "sepia(60%)" })}
         >
           Vintage
         </button>
         <button
-          className="px-2 py-1 rounded text-xs bg-gray-100"
+          className={toolbarButtonClass}
           onClick={() =>
             updateElement({ filter: "contrast(1.5) saturate(1.2)" })
           }
@@ -3260,10 +3476,9 @@ const ImagePopupToolbar: React.FC<{
         {frames.map(({ name, value }) => (
           <button
             key={name}
-            className={clsx(
-              "px-2 py-1 rounded text-xs",
-              element.frame === value ? "bg-blue-200" : "bg-gray-100"
-            )}
+            className={
+              element.frame === value ? toolbarActiveClass : toolbarButtonClass
+            }
             onClick={() => updateElement({ frame: value })}
           >
             {name}
@@ -3272,7 +3487,7 @@ const ImagePopupToolbar: React.FC<{
       </div>
       {/* Replace */}
       <button
-        className="px-2 py-1 rounded text-xs bg-yellow-100 hover:bg-yellow-200"
+        className={toolbarButtonClass}
         title="Replace image"
         type="button"
         onClick={triggerFileInput}
@@ -3288,7 +3503,7 @@ const ImagePopupToolbar: React.FC<{
       />
       {/* Delete */}
       <button
-        className="px-2 py-1 rounded text-xs bg-red-100 hover:bg-red-300 text-red-700"
+        className={toolbarButtonClass}
         title="Delete"
         type="button"
         onClick={deleteElement}
@@ -3380,7 +3595,7 @@ const RotateHandle: React.FC<{
     >
       <div
         onMouseDown={onMouseDown}
-        className="rounded-full border border-blue-400 bg-white hover:bg-blue-200 shadow"
+        className="flex h-full w-full items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] shadow transition hover:bg-[var(--color-surface-raised)]"
         style={{
           width: 12,
           height: 12,
@@ -3392,7 +3607,7 @@ const RotateHandle: React.FC<{
         }}
         title="Drag to rotate"
       >
-        <RotateCw size={10} className="text-blue-500" />
+        <RotateCw size={10} className="text-[var(--color-primary)]" />
       </div>
     </div>
   );
@@ -3414,6 +3629,11 @@ const ImageToolButton: React.FC<ImageToolButtonProps> = ({
   const triggerFileInput = () => {
     inputRef.current?.click();
   };
+  const buttonClass = clsx(
+    "flex items-center justify-center rounded-full p-3 transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -3424,7 +3644,7 @@ const ImageToolButton: React.FC<ImageToolButtonProps> = ({
   return (
     <>
       <button
-        className={clsx(buttonClass(theme), hoverFX(theme))}
+        className={buttonClass}
         title="Add image"
         type="button"
         onClick={triggerFileInput}
@@ -3458,6 +3678,11 @@ const StickerToolButton: React.FC<StickerToolButtonProps> = ({
   const triggerFileInput = () => {
     inputRef.current?.click();
   };
+  const buttonClass = clsx(
+    "flex items-center justify-center rounded-full p-3 transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -3468,7 +3693,7 @@ const StickerToolButton: React.FC<StickerToolButtonProps> = ({
   return (
     <>
       <button
-        className={clsx(buttonClass(theme), hoverFX(theme))}
+        className={buttonClass}
         title="Add sticker"
         type="button"
         onClick={triggerFileInput}
@@ -3485,141 +3710,6 @@ const StickerToolButton: React.FC<StickerToolButtonProps> = ({
     </>
   );
 };
-// StickerToolButton component
-// type StickerToolButtonProps = {
-//   Icon: React.ComponentType<{ size?: number }>;
-//   theme: Theme;
-//   addStickerElement: (src: string) => void;
-// };
-
-// const StickerToolButton: React.FC<StickerToolButtonProps> = ({
-//   Icon,
-//   theme,
-//   addStickerElement,
-// }) => {
-//   const [open, setOpen] = React.useState(false);
-//   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-//   // Preset sticker image URLs
-//   const presetStickers = [
-//     "https://placekitten.com/80/80",
-//     "https://placebear.com/80/80",
-//     "https://picsum.photos/80",
-//     "https://placekitten.com/81/80",
-//     "https://placebear.com/81/80",
-//     "https://picsum.photos/81",
-//     "https://placekitten.com/80/81",
-//     "https://placebear.com/80/81",
-//     "https://picsum.photos/82",
-//   ];
-
-//   // When a preset sticker is clicked
-//   const handleStickerClick = (src: string) => {
-//     addStickerElement(src);
-//     setOpen(false);
-//   };
-
-//   // On upload button click
-//   const triggerFileInput = () => {
-//     fileInputRef.current?.click();
-//   };
-
-//   // On file selection
-//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const file = e.target.files?.[0];
-//     if (file) {
-//       const url = URL.createObjectURL(file);
-//       addStickerElement(url);
-//       setOpen(false);
-//       // Optionally: clear input value so same file can be uploaded again
-//       e.target.value = "";
-//     }
-//   };
-
-//   return (
-//     <Popup
-//       trigger={
-//         <button
-//           aria-label="Add sticker"
-//           className={clsx(buttonClass(theme), hoverFX(theme))}
-//           type="button"
-//         >
-//           <Icon size={18} />
-//         </button>
-//       }
-//       position="top center"
-//       closeOnDocumentClick
-//       arrow={false}
-//       contentStyle={{
-//         padding: "1rem",
-//         borderRadius: "0.5rem",
-//         boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-//         maxWidth: "260px",
-//       }}
-//       open={open}
-//       onOpen={() => setOpen(true)}
-//       onClose={() => setOpen(false)}
-//     >
-//       <div
-//         className={clsx(
-//           "flex flex-col gap-4 p-2 rounded-lg",
-//           panelThemeClass(theme)
-//         )}
-//         style={{ minWidth: 200 }}
-//       >
-//         <div>
-//           <p className="text-sm font-semibold mb-2">Stickers</p>
-//           <div className="grid grid-cols-3 gap-2">
-//             {presetStickers.map((src, i) => (
-//               <button
-//                 key={src}
-//                 onClick={() => handleStickerClick(src)}
-//                 className="rounded border border-transparent hover:border-pink-400 focus:border-pink-500 transition"
-//                 style={{
-//                   padding: 0,
-//                   background: "none",
-//                   cursor: "pointer",
-//                 }}
-//                 type="button"
-//                 tabIndex={0}
-//               >
-//                 <img
-//                   src={src}
-//                   alt={`Sticker ${i + 1}`}
-//                   style={{
-//                     width: 56,
-//                     height: 56,
-//                     objectFit: "contain",
-//                     borderRadius: 10,
-//                     boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-//                     background: "#fff",
-//                   }}
-//                   draggable={false}
-//                 />
-//               </button>
-//             ))}
-//           </div>
-//         </div>
-//         <div className="flex flex-col items-center">
-//           <button
-//             type="button"
-//             onClick={triggerFileInput}
-//             className="rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600 transition"
-//           >
-//             Upload Sticker
-//           </button>
-//           <input
-//             type="file"
-//             accept="image/*"
-//             ref={fileInputRef}
-//             onChange={handleFileChange}
-//             className="hidden"
-//           />
-//         </div>
-//       </div>
-//     </Popup>
-//   );
-// };
 // StickerSheetButton: Custom Sticker popup for bottom toolbar
 type StickerSheetButtonProps = {
   Icon: React.ComponentType<{ size?: number }>;
@@ -3634,6 +3724,26 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const triggerButtonClass = clsx(
+    "flex items-center justify-center rounded-full p-3 transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
+  const closeButtonClass = clsx(
+    "rounded-full p-2 transition",
+    themeConfig[theme].panel,
+    themeConfig[theme].hover
+  );
+  const gridButtonClass = clsx(
+    "rounded-xl shadow transition border border-[var(--color-border-subtle)] flex items-center justify-center p-2",
+    themeConfig[theme].panel,
+    themeConfig[theme].hover
+  );
+  const uploadButtonClass = clsx(
+    "rounded px-4 py-2 font-medium transition",
+    themeConfig[theme].button,
+    themeConfig[theme].hover
+  );
 
   // Placeholder stickers (SVG data URLs)
   const stickers: { name: string; url: string }[] = [
@@ -3726,7 +3836,7 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
     <Popup
       trigger={
         <button
-          className={clsx(buttonClass(theme), hoverFX(theme))}
+          className={triggerButtonClass}
           aria-label="Stickers"
           type="button"
         >
@@ -3749,7 +3859,7 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
       <div
         className={clsx(
           "flex flex-col gap-2",
-          panelThemeClass(theme),
+          themeConfig[theme].panel,
           "rounded-t-2xl"
         )}
         style={{
@@ -3768,7 +3878,7 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
             <span className="font-semibold text-lg">Stickers</span>
           </div>
           <button
-            className="rounded-full p-2 text-gray-500 hover:bg-gray-200 transition"
+            className={clsx(closeButtonClass, "text-[var(--color-ink-soft)]")}
             aria-label="Close"
             type="button"
             onClick={closePopup}
@@ -3784,7 +3894,8 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
                 key={sticker.name}
                 type="button"
                 className={clsx(
-                  "rounded-xl bg-white shadow hover:shadow-lg transition border border-transparent hover:border-blue-400 flex items-center justify-center p-2"
+                  gridButtonClass,
+                  "hover:border-[var(--color-border-emphasis)]"
                 )}
                 style={{
                   width: 72,
@@ -3793,7 +3904,7 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
                 title={sticker.name}
                 onClick={() => {
                   addStickerElement(sticker.url);
-                  close();
+                  closePopup();
                 }}
               >
                 <img
@@ -3815,9 +3926,7 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
         {/* Upload sticker */}
         <div className="px-5 pb-4 flex items-center">
           <button
-            className={clsx(
-              "rounded bg-blue-500 px-4 py-2 text-white font-medium hover:bg-blue-600 transition"
-            )}
+            className={uploadButtonClass}
             type="button"
             onClick={() => fileInputRef.current?.click()}
           >
@@ -3835,391 +3944,3 @@ const StickerSheetButton: React.FC<StickerSheetButtonProps> = ({
     </Popup>
   );
 };
-// type MusicSearchPopupProps = {
-//   theme: Theme;
-//   addAudioElement: (src: string, title?: string, artist?: string) => void;
-// };
-
-// const MusicSearchPopup: React.FC<MusicSearchPopupProps> = ({
-//   theme,
-//   addAudioElement,
-// }) => {
-//   const [open, setOpen] = React.useState(false);
-//   const [source, setSource] = React.useState<"youtube" | "spotify">("youtube");
-//   const [query, setQuery] = React.useState("");
-//   const [loading, setLoading] = React.useState(false);
-//   const [error, setError] = React.useState<string | null>(null);
-//   const [results, setResults] = React.useState<
-//     Array<{
-//       id: string;
-//       title: string;
-//       artist?: string;
-//       duration: string;
-//       thumbnail?: string;
-//       src: string;
-//     }>
-//   >([]);
-//   const [previewId, setPreviewId] = React.useState<string | null>(null);
-//   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-//   // Small built-in audio (mock preview) - short beep WAV
-//   const MOCK_AUDIO_SRC =
-//     "data:audio/wav;base64,UklGRmQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA//8AAP//AAD//wAA//8AAP//AAD//wAA"; // ultra-short placeholder tone
-
-//   const openPopup = () => setOpen(true);
-//   const closePopup = () => {
-//     setOpen(false);
-//     setPreviewId(null);
-//   };
-
-//   const doSearch = () => {
-//     setLoading(true);
-//     setError(null);
-//     // Simulate async search with mock data
-//     window.setTimeout(() => {
-//       // Create 5 mock tracks using the current query + source
-//       const base =
-//         query.trim() || (source === "spotify" ? "Lo-fi Focus" : "Chill Beats");
-//       const mock = Array.from({ length: 5 }).map((_, i) => ({
-//         id: `${source}-${Date.now()}-${i}`,
-//         title: `${base} #${i + 1}`,
-//         artist: source === "spotify" ? "Mock Artist" : "Mock Channel",
-//         duration: ["2:03", "3:12", "1:47", "2:56", "4:05"][i % 5],
-//         thumbnail:
-//           "data:image/svg+xml;utf8," +
-//           encodeURIComponent(
-//             `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='80'><rect width='120' height='80' fill='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%236b7280'>${source.toUpperCase()}</text></svg>`
-//           ),
-//         src: MOCK_AUDIO_SRC,
-//       }));
-//       setResults(mock);
-//       setLoading(false);
-//     }, 600);
-//   };
-
-//   const handlePreview = (id: string, src: string) => {
-//     try {
-//       // stop others
-//       const prevTags = document.querySelectorAll(
-//         "audio[data-music-preview='1']"
-//       );
-//       prevTags.forEach((a) => (a as HTMLAudioElement).pause());
-//       setPreviewId((cur) => (cur === id ? null : id));
-//       // play this one if toggled on
-//       window.setTimeout(() => {
-//         const tag = document.getElementById(
-//           `music-preview-${id}`
-//         ) as HTMLAudioElement | null;
-//         if (tag) {
-//           if (previewId === id) {
-//             tag.pause();
-//           } else {
-//             tag.currentTime = 0;
-//             tag.play().catch(() => void 0);
-//           }
-//         }
-//       }, 0);
-//     } catch {
-//       // ignore
-//     }
-//   };
-
-//   const handleAddToCanvas = (item: {
-//     src: string;
-//     title: string;
-//     artist?: string;
-//   }) => {
-//     addAudioElement(item.src, item.title, item.artist);
-//   };
-
-//   const triggerFilePicker = () => fileInputRef.current?.click();
-
-//   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const file = e.target.files?.[0];
-//     if (!file) return;
-//     const url = URL.createObjectURL(file);
-//     addAudioElement(url, file.name);
-//     // Reset input value so same file can be picked again
-//     e.target.value = "";
-//     setOpen(false);
-//   };
-
-//   // --- Recording via MediaRecorder (mock-friendly; will no-op if unavailable) ---
-//   const [recording, setRecording] = React.useState(false);
-//   const [recURL, setRecURL] = React.useState<string | null>(null);
-//   const mediaStreamRef = React.useRef<MediaStream | null>(null);
-//   const recorderRef = React.useRef<MediaRecorder | null>(null);
-//   const chunksRef = React.useRef<BlobPart[]>([]);
-
-//   const startRecording = async () => {
-//     try {
-//       setError(null);
-//       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-//       mediaStreamRef.current = stream;
-//       const rec = new MediaRecorder(stream);
-//       recorderRef.current = rec;
-//       chunksRef.current = [];
-//       rec.ondataavailable = (e) => {
-//         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-//       };
-//       rec.onstop = () => {
-//         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-//         const url = URL.createObjectURL(blob);
-//         setRecURL(url);
-//       };
-//       rec.start();
-//       setRecording(true);
-//     } catch (err) {
-//       setError("Microphone permission denied");
-//     }
-//   };
-
-//   const stopRecording = () => {
-//     recorderRef.current?.stop();
-//     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-//     setRecording(false);
-//   };
-
-//   const addRecording = () => {
-//     if (!recURL) return;
-//     addAudioElement(recURL, "Recording");
-//     setRecURL(null);
-//     setOpen(false);
-//   };
-
-//   // Button/icon trigger (theme-aware styles; using a simple note glyph for universal compatibility)
-//   const TriggerButton = (
-//     <button
-//       className={clsx(buttonClass(theme), hoverFX(theme))}
-//       aria-label="Music"
-//       title="Music"
-//       type="button"
-//     >
-//       {/* Using a simple glyph to avoid introducing new icon imports */}
-//       <span aria-hidden="true" style={{ fontSize: 16 }}>
-//         ♪
-//       </span>
-//     </button>
-//   );
-
-//   return (
-//     <Popup
-//       trigger={TriggerButton}
-//       position="bottom center"
-//       closeOnDocumentClick
-//       arrow={false}
-//       contentStyle={{ padding: 0, border: "none", background: "transparent" }}
-//       open={open}
-//       onOpen={openPopup}
-//       onClose={closePopup}
-//       modal
-      
-//     >
-//       <div
-//         className={clsx("flex flex-col rounded-t-2xl", panelThemeClass(theme))}
-//         style={{
-//           minWidth: 480,
-//           maxWidth: 640,
-//           borderRadius: "1rem 1rem 0 0",
-//           boxShadow: "0 -4px 24px rgba(0,0,0,0.10)",
-//         }}
-//       >
-//         {/* Header Row */}
-//         <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-black/10">
-//           {/* Left: Source + Search */}
-//           <div className="flex items-center gap-2 flex-1">
-//             <div className="inline-flex rounded overflow-hidden border border-black/10">
-//               <button
-//                 type="button"
-//                 className={clsx(
-//                   "px-3 py-1.5 text-sm",
-//                   source === "youtube" ? "bg-white/80" : "bg-transparent"
-//                 )}
-//                 onClick={() => setSource("youtube")}
-//                 aria-pressed={source === "youtube"}
-//               >
-//                 YouTube
-//               </button>
-//               <button
-//                 type="button"
-//                 className={clsx(
-//                   "px-3 py-1.5 text-sm",
-//                   source === "spotify" ? "bg-white/80" : "bg-transparent"
-//                 )}
-//                 onClick={() => setSource("spotify")}
-//                 aria-pressed={source === "spotify"}
-//               >
-//                 Spotify
-//               </button>
-//             </div>
-
-//             <input
-//               type="text"
-//               value={query}
-//               onChange={(e) => setQuery(e.target.value)}
-//               placeholder={
-//                 source === "spotify"
-//                   ? "Search tracks or artists"
-//                   : "Search videos"
-//               }
-//               className="flex-1 px-3 py-2 text-sm rounded border border-black/10 bg-white/80 outline-none"
-//               aria-label="Search"
-//               onKeyDown={(e) => {
-//                 if (e.key === "Enter") doSearch();
-//               }}
-//             />
-//             <button
-//               type="button"
-//               onClick={doSearch}
-//               className="px-3 py-2 text-sm rounded bg-blue-500 text-white hover:bg-blue-600"
-//               aria-label="Search"
-//             >
-//               Search
-//             </button>
-//           </div>
-
-//           {/* Right: Upload + Record */}
-//           <div className="flex items-center gap-2">
-//             <button
-//               type="button"
-//               onClick={triggerFilePicker}
-//               className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
-//               aria-label="Upload audio"
-//             >
-//               Upload
-//             </button>
-//             <input
-//               ref={fileInputRef}
-//               type="file"
-//               accept="audio/*"
-//               className="hidden"
-//               onChange={onFileChange}
-//             />
-
-//             {!recording ? (
-//               <button
-//                 type="button"
-//                 onClick={startRecording}
-//                 className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
-//                 aria-label="Start recording"
-//               >
-//                 Record
-//               </button>
-//             ) : (
-//               <button
-//                 type="button"
-//                 onClick={stopRecording}
-//                 className="px-3 py-2 text-sm rounded bg-red-500 text-white hover:bg-red-600"
-//                 aria-label="Stop recording"
-//               >
-//                 Stop
-//               </button>
-//             )}
-//           </div>
-//         </div>
-
-//         {/* Body */}
-//         <div className="px-5 py-4">
-//           {error && (
-//             <div className="mb-3 text-sm text-red-600" role="alert">
-//               {error}
-//             </div>
-//           )}
-
-//           {recording && (
-//             <div className="mb-4 text-sm">
-//               Recording... speak now. Click Stop to finish.
-//             </div>
-//           )}
-//           {recURL && (
-//             <div className="mb-4 flex items-center gap-2">
-//               <audio controls src={recURL} className="h-8" />
-//               <button
-//                 type="button"
-//                 onClick={addRecording}
-//                 className="px-3 py-1.5 text-sm rounded bg-green-500 text-white hover:bg-green-600"
-//               >
-//                 Add to Canvas
-//               </button>
-//             </div>
-//           )}
-
-//           {loading ? (
-//             <div className="grid gap-2">
-//               {Array.from({ length: 5 }).map((_, i) => (
-//                 <div
-//                   key={i}
-//                   className="h-14 rounded bg-gray-200 animate-pulse"
-//                 />
-//               ))}
-//             </div>
-//           ) : results.length === 0 ? (
-//             <div className="text-sm text-gray-500">
-//               Start by searching for music or upload/record your own.
-//             </div>
-//           ) : (
-//             <ul className="divide-y divide-black/10">
-//               {results.map((item) => (
-//                 <li key={item.id} className="flex items-center gap-3 py-2">
-//                   <img
-//                     src={item.thumbnail}
-//                     alt=""
-//                     className="w-16 h-10 rounded object-cover bg-gray-200"
-//                     draggable={false}
-//                   />
-//                   <div className="flex-1 min-w-0">
-//                     <div className="text-sm font-medium truncate">
-//                       {item.title}
-//                     </div>
-//                     <div className="text-xs text-gray-500 truncate">
-//                       {item.artist} • {item.duration}
-//                     </div>
-//                   </div>
-//                   <div className="flex items-center gap-2">
-//                     <button
-//                       type="button"
-//                       onClick={() => handlePreview(item.id, item.src)}
-//                       className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200"
-//                       aria-label="Preview"
-//                       title="Preview"
-//                     >
-//                       {previewId === item.id ? "Pause" : "Preview"}
-//                     </button>
-//                     <button
-//                       type="button"
-//                       onClick={() => handleAddToCanvas(item)}
-//                       className="px-2 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600"
-//                       aria-label="Add to Canvas"
-//                       title="Add to Canvas"
-//                     >
-//                       Add
-//                     </button>
-//                   </div>
-//                   {/* Hidden preview audio tag */}
-//                   <audio
-//                     id={`music-preview-${item.id}`}
-//                     data-music-preview="1"
-//                     src={item.src}
-//                     style={{ display: "none" }}
-//                     onEnded={() => setPreviewId(null)}
-//                   />
-//                 </li>
-//               ))}
-//             </ul>
-//           )}
-//         </div>
-
-//         {/* Footer */}
-//         <div className="flex items-center justify-end gap-2 px-5 pb-4">
-//           <button
-//             type="button"
-//             onClick={closePopup}
-//             className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
-//           >
-//             Close
-//           </button>
-//         </div>
-//       </div>
-//     </Popup>
-//   );
-// };

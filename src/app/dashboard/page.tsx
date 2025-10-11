@@ -4,18 +4,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import { neutralBookTemplates } from "@/data/book-templates";
-
-type RecentBook = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  coverImage?: string | null;
-  background: string;
-  variant: "solid" | "grid" | "abstract" | "strap" | "gradient";
-  titleColor?: string | null;
-  subtitleColor?: string | null;
-  updatedAt: number;
-};
+import {
+  readRecentBooks,
+  RECENT_BOOKS_STORAGE_KEY,
+  type RecentBook,
+} from "@/lib/recent-books";
 
 const Dashboard = () => {
   const router = useRouter();
@@ -28,10 +21,12 @@ const Dashboard = () => {
 
     const loadRecents = () => {
       try {
-        const raw = localStorage.getItem("keeps-recents");
-        const parsed = raw ? (JSON.parse(raw) as RecentBook[]) : [];
+        const parsed = readRecentBooks();
+        console.debug("[Dashboard] Loaded recent books", {
+          count: parsed.length,
+          ids: parsed.map((book) => book.id),
+        });
         setRecentBooks(parsed);
-        console.log(parsed,"this is parsed")
         if (!userToggledTemplates.current) {
           setShowAllTemplates(parsed.length === 0);
         }
@@ -40,11 +35,17 @@ const Dashboard = () => {
       }
     };
 
-    
-
     loadRecents();
-    window.addEventListener("storage", loadRecents);
-    return () => window.removeEventListener("storage", loadRecents);
+    const handleStorage = (event: StorageEvent) => {
+      if (
+        event.key === null ||
+        event.key === RECENT_BOOKS_STORAGE_KEY
+      ) {
+        loadRecents();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   const formatRelativeTime = (timestamp: number) => {
@@ -126,7 +127,7 @@ const Dashboard = () => {
                   <button
                     type="button"
                     onClick={handleCreateNewBook}
-                    className="starter-card group"
+                    className="starter-card group !p-0"
                     aria-label="Create blank notebook"
                   >
                     <div className="aspect-[128/186] w-full">
@@ -142,7 +143,7 @@ const Dashboard = () => {
                       key={book.id}
                       type="button"
                       onClick={() => handleTemplateSelect(book.id)}
-                      className="starter-card group"
+                      className="starter-card group !p-0"
                     >
                       <div className="aspect-[128/186] w-full book-shadow-div">
                         <BookCover

@@ -1,29 +1,54 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+
+/* =========================
+   Global Theme Variables
+   ========================= */
+:root {
+  /* Font variables (shared across themes) */
+  --font-pixel: var(--font-minecraftia), sans-serif;
+  --font-body: var(--font-lato), sans-serif;
+  --font-logo: var(--font-plaster), sans-serif;
+  --font-logo-word: var(--font-poppins), sans-serif;
+  --font-logo-serif: var(--font-serif), sans-serif;
+  --font-heading: var(--font-bricolage), sans-serif;
+  --font-sans: var(--font-manrope), sans-serif;
+  --font-accent: var(--font-patrik-hand), cursive;
+  --font-second-accent: var(--font-caveat), cursive;
+  --font-alt: var(--font-space-grotesk), sans-serif;
+  --font-race: var(--font-caress);
+  --font-jewel: var(--font-vensfolk);
+}
+
+/* =========================
+     Neutral Theme
+     ========================= */
+[data-theme="neutral"] {
+  --color-background: #ffffff;
+  --color-foreground: #2E2A3F;
   --color-primary: #6F5DD2;
-  --color-secondary: #6c5e82;
-  /* --color-secondary: #8978F0; */
+  --color-secondary: #B8C0FF;
   --color-surface-base: #ECEFFF;
   --color-surface-raised: #F8F6FF;
   --color-surface-overlay: #FFFFFF;
-  --color-surface-card: #F4F2FF;
-  /* text color  */
+  --color-surface-card: #FDFCFE;
   --color-ink: #50456E;
-  --color-ink-strong: #3D3D3D;
+  --color-ink-strong: #2E2A3F;
   --color-ink-soft: #636363;
-  /* --color-ink-soft: #737373; */
   --color-ink-muted: #b0b0b0;
-  --color-ink-disabled: #b0b0b0;
-  --color-border-subtle: #D4CEED;
+  --color-ink-disabled: #d0d0d0;
+  --color-border-subtle: #CBD0F5;
   --color-border-emphasis: #998AD6;
   --color-halo-soft: #AC91EB;
   --color-halo-glow: #6F5DD2;
   --color-highlight-star: #EB9D00;
+  --color-iconbutton: #EAEEED;
+  --color-iconborder-border: transparent;
+  --color-iconbutton-hover: #D5DDDB;
+  --color-icon: #191F1E;
 
+  /* Prefixed */
   --color-theme-neutral-base: #F5F6FF;
   --color-theme-neutral-card: #FDFCFE;
   --color-theme-neutral-overlay: rgba(242, 243, 255, 0.82);
@@ -32,6 +57,37 @@
   --color-theme-neutral-border: #CBD0F5;
   --color-theme-neutral-text: #2E2A3F;
 
+
+}
+
+/* =========================
+     Kawaii Theme
+     ========================= */
+[data-theme="kawaii"] {
+  --color-background: #FFF5FA;
+  --color-foreground: #60324C;
+  --color-primary: #FFB8D2;
+  --color-secondary: #FFE4EE;
+  --color-surface-base: #FFF0F8;
+  --color-surface-raised: #FFF8FC;
+  --color-surface-overlay: rgba(255, 238, 247, 0.9);
+  --color-surface-card: rgba(255, 240, 248, 0.8);
+  --color-ink: #60324C;
+  --color-ink-strong: #A05185;
+  --color-ink-soft: #D49CB5;
+  --color-ink-muted: #eebfd8;
+  --color-ink-disabled: #f6dbe7;
+  --color-border-subtle: #F9C9DD;
+  --color-border-emphasis: #FFB8D2;
+  --color-halo-soft: #FFD6EC;
+  --color-halo-glow: #FFB8D2;
+  --color-highlight-star: #FFD700;
+  ---color-iconbutton: #FFB8D2;
+  --color-iconborder-border: #34413E;
+  --color-iconbutton-hover: #EAEEED;
+  --color-icon: #60324C;
+
+  /* Prefixed */
   --color-theme-kawaii-base: #FFF5FA;
   --color-theme-kawaii-card: rgba(255, 240, 248, 0.8);
   --color-theme-kawaii-overlay: rgba(255, 238, 247, 0.9);
@@ -40,6 +96,35 @@
   --color-theme-kawaii-border: #F9C9DD;
   --color-theme-kawaii-text: #60324C;
 
+}
+
+/* =========================
+     Retro Theme
+     ========================= */
+[data-theme="retro"] {
+  --color-background: #FFF4E6;
+  --color-foreground: #4A321F;
+  --color-primary: #FFB86C;
+  --color-secondary: #FFE3B5;
+  --color-surface-base: #F5E3C9;
+  --color-surface-raised: #FFF6E3;
+  --color-surface-overlay: rgba(255, 226, 195, 0.88);
+  --color-surface-card: rgba(255, 231, 204, 0.82);
+  --color-ink: #4A321F;
+  --color-ink-strong: #2C1A0E;
+  --color-ink-soft: #A57B5B;
+  --color-ink-muted: #E3C29B;
+  --color-ink-disabled: #F3E1C7;
+  --color-border-subtle: #E3C29B;
+  --color-border-emphasis: #FFB86C;
+  --color-halo-soft: #FFE3B5;
+  --color-halo-glow: #FFB86C;
+  --color-highlight-star: #FFD700;
+  --color-iconbutton: #FFB86C;
+  --color-iconborder-border: #34413E;
+  --color-iconbutton-hover: #EAEEED;
+--color-icon: #4A321F;
+  /* Prefixed */
   --color-theme-retro-base: #FFF4E6;
   --color-theme-retro-card: rgba(255, 231, 204, 0.82);
   --color-theme-retro-overlay: rgba(255, 226, 195, 0.88);
@@ -48,34 +133,189 @@
   --color-theme-retro-border: #E3C29B;
   --color-theme-retro-text: #4A321F;
 
-  --font-pixel: var(--font-minecraftia), sans-serif;
-  --font-body: var(--font-lato), sans-serif;
-  --font-logo: var(--font-plaster), sans-serif;
-  --font-logo-word: var(--font-Poppins), sans-serif;
-  --font-logo-serif: var(--font-serif), sans-serif;
-  --font-heading: var(--font-bricolage), sans-serif;
-  --font-sans: var(--font-manrope), sans-serif;
-  --font-accent: var(--font-patrik-hand), cursive;
-  --font-second-accent: var(--font-caveat), cursive;
-  --font-alt: var(--font-space-grotesk), sans-serif;
-  --font-race:var(--font-caress);
-  --font-jewel:var(--font-vensfolk)
+
+}
+
+/* =========================
+     Anime Theme
+     ========================= */
+[data-theme="anime"] {
+  --color-background: #0D0D0D;
+  --color-foreground: #FFFFFF;
+  --color-primary: #FF3B30;
+  --color-secondary: #FF9A8F;
+  --color-surface-base: #181820;
+  --color-surface-raised: #232333;
+  --color-surface-overlay: rgba(13, 13, 18, 0.92);
+  --color-surface-card: rgba(16, 16, 20, 0.88);
+  --color-ink: #FFFFFF;
+  --color-ink-strong: #FF3B30;
+  --color-ink-soft: #FF9A8F;
+  --color-ink-muted: #B5B3C6;
+  --color-ink-disabled: #4B495C;
+  --color-border-subtle: #2A2A2A;
+  --color-border-emphasis: #FF3B30;
+  --color-halo-soft: #FF9A8F;
+  --color-halo-glow: #FF3B30;
+  --color-highlight-star: #FFD700;
+  --color-iconbutton: #FFB86C;
+  --color-iconborder-border: #34413E;
+  --color-iconbutton-hover: #EAEEED;
+--color-icon: #4A321F;
+
+  /* Prefixed */
+  --color-theme-anime-base: #0D0D0D;
+  --color-theme-anime-card: rgba(16, 16, 20, 0.88);
+  --color-theme-anime-overlay: rgba(13, 13, 18, 0.92);
+  --color-theme-anime-accent: #FF3B30;
+  --color-theme-anime-accent-soft: #FF9A8F;
+  --color-theme-anime-border: #2A2A2A;
+  --color-theme-anime-text: #FFFFFF;
+  --color-theme-anime-tool: #FF3B30;
+--color-theme-anime-icon: #FFFFFF;
+}
+
+
+/* .bg-neutral-base { background-color: var(--color-theme-neutral-base); }
+.bg-neutral-card { background-color: var(--color-theme-neutral-card); }
+.text-neutral { color: var(--color-theme-neutral-text); }
+.border-neutral { border-color: var(--color-theme-neutral-border); } */
+
+/* =========================
+   Theme Mappings
+   ========================= */
+
+/* Neutral Theme */
+.theme-neutral {
+  --color-background: var(--color-theme-neutral-base);
+  --color-foreground: var(--color-foreground);
+  --color-surface-base: var(--color-surface-base);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-card: var(--color-theme-neutral-card);
+  --color-surface-overlay: var(--color-theme-neutral-overlay);
+  --color-primary: var(--color-theme-neutral-accent);
+  --color-secondary: var(--color-theme-neutral-accent-soft);
+
+  /* Extended mapping */
+  --color-ink: var(--color-ink);
+  --color-ink-strong: var(--color-ink-strong);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-ink-disabled: var(--color-ink-disabled);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-emphasis: var(--color-border-emphasis);
+  --color-halo-soft: var(--color-halo-soft);
+  --color-halo-glow: var(--color-halo-glow);
+  --color-highlight-star: var(--color-highlight-star);
+  --color-iconbutton: var(--color-iconbutton);
+  --color-iconborder-border:var(--color-iconborder-border);
+  --color-iconbutton-hover: var(--color-iconbutton-hover);
+  --color-icon: var(--color-icon);
+}
+
+/* Kawaii Theme */
+.theme-kawaii {
+  --color-background: var(--color-theme-kawaii-base);
+  --color-foreground: var(--color-foreground);
+  --color-surface-base: var(--color-surface-base);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-card: var(--color-theme-kawaii-card);
+  --color-surface-overlay: var(--color-theme-kawaii-overlay);
+  --color-primary: var(--color-theme-kawaii-accent);
+  --color-secondary: var(--color-theme-kawaii-accent-soft);
+  --color-border: var(--color-theme-kawaii-border);
+  --color-text: var(--color-theme-kawaii-text);
+  --color-iconbutton: var(--color-iconbutton);
+  --color-iconborder-border:var(--color-iconborder-border);
+  --color-iconbutton-hover: var(--color-iconbutton-hover);
+  --color-icon: var(--color-icon);
+
+  /* Extended mapping */
+  --color-ink: var(--color-ink);
+  --color-ink-strong: var(--color-ink-strong);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-ink-disabled: var(--color-ink-disabled);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-emphasis: var(--color-border-emphasis);
+  --color-halo-soft: var(--color-halo-soft);
+  --color-halo-glow: var(--color-halo-glow);
+  --color-highlight-star: var(--color-highlight-star);
+
+}
+
+/* Retro Theme */
+.theme-retro {
+  --color-background: var(--color-theme-retro-base);
+  --color-foreground: var(--color-foreground);
+  --color-surface-base: var(--color-surface-base);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-card: var(--color-theme-retro-card);
+  --color-surface-overlay: var(--color-theme-retro-overlay);
+  --color-primary: var(--color-theme-retro-accent);
+  --color-secondary: var(--color-theme-retro-accent-soft);
+  --color-border: var(--color-theme-retro-border);
+  --color-text: var(--color-theme-retro-text);
+  --color-iconbutton: var(--color-iconbutton);
+  --color-iconborder-border:var(--color-iconborder-border);
+  --color-iconbutton-hover: var(--color-iconbutton-hover);
+  --color-icon: var(--color-icon);
+
+  /* Extended mapping */
+  --color-ink: var(--color-ink);
+  --color-ink-strong: var(--color-ink-strong);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-ink-disabled: var(--color-ink-disabled);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-emphasis: var(--color-border-emphasis);
+  --color-halo-soft: var(--color-halo-soft);
+  --color-halo-glow: var(--color-halo-glow);
+  --color-highlight-star: var(--color-highlight-star);
+
+}
+
+/* Anime Theme */
+.theme-anime {
+  --color-background: var(--color-theme-anime-base);
+  --color-foreground: var(--color-foreground);
+  --color-surface-base: var(--color-surface-base);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-card: var(--color-theme-anime-card);
+  --color-surface-overlay: var(--color-theme-anime-overlay);
+  --color-primary: var(--color-theme-anime-accent);
+  --color-secondary: var(--color-theme-anime-accent-soft);
+  --color-border: var(--color-theme-anime-border);
+  --color-text: var(--color-theme-anime-text);
+  --color-iconbutton: var(--color-iconbutton);
+  --color-iconborder-border:var(--color-iconborder-border);
+  --color-iconbutton-hover: var(--color-iconbutton-hover);
+  --color-icon: var(--color-icon);
+
+  /* Extended mapping */
+  --color-ink: var(--color-ink);
+  --color-ink-strong: var(--color-ink-strong);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-ink-disabled: var(--color-ink-disabled);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-emphasis: var(--color-border-emphasis);
+  --color-halo-soft: var(--color-halo-soft);
+  --color-halo-glow: var(--color-halo-glow);
+  --color-highlight-star: var(--color-highlight-star);
+
 }
 
 
 
 @layer base {
-  body {
-    /* background-color: #FDFBF7 !important; */
+  .landing-body {
     background-color: #ecedff !important;
-    /* background-color: #FAF4EC !important; */
-    background-image: linear-gradient(
-      rgba(249, 247, 255, 0.6),
-      rgb(255, 255, 247)
-      ),
+    background-image: linear-gradient(rgba(249, 247, 255, 0.6),
+        rgb(255, 255, 247)),
       /* url("https://www.transparenttextures.com/patterns/batthern.png") !important; */
-        /* url("https://www.transparenttextures.com/patterns/grid-me.png") !important; */
-        url("https://www.transparenttextures.com/patterns/worn-dots.png") !important;
+      /* url("https://www.transparenttextures.com/patterns/grid-me.png") !important; */
+      url("https://www.transparenttextures.com/patterns/worn-dots.png") !important;
     /* url("https://www.transparenttextures.com/patterns/asfalt-dark.png"); */
     /* url("https://www.transparenttextures.com/patterns/bright-squares.png"); */
     /* url("https://www.transparenttextures.com/patterns/cartographer.png"); */
@@ -88,30 +328,37 @@
     /* url("https://www.transparenttextures.com/patterns/tiny-grid.png"); */
     /* url("https://www.transparenttextures.com/patterns/woven-light.png"); */
 
-
     /* or no-repeat */
     /* url("https://www.transparenttextures.com/patterns/random-grey-variations.png"); */
   }
 }
 
-h1,h2,h3,h4,h5,h6{
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-manrope);
 }
+
 body {
   font-family: var(--font-manrope), sans-serif !important;
   /* font-family: var(--font-lato), sans-serif !important; */
 }
 
-.logo-font{
+.logo-font {
   font-family: var(--font-caress), sans-serif;
   /* -webkit-text-stroke: 3px !important; */
   /* letter-spacing: 3px; */
   /* font-family: var(--font-plaster), sans-serif; */
 
 }
-.grotesk-font{
-    font-family: var(--font-space-grotesk), sans-serif;
+
+.grotesk-font {
+  font-family: var(--font-space-grotesk), sans-serif;
 }
+
 .pixel-font {
   font-family: var(--font-minecraftia), sans-serif;
 }
@@ -141,6 +388,7 @@ body {
   transform: translateY(0) rotate(0deg);
   transition: transform 200ms ease, box-shadow 220ms ease, background-color 200ms ease;
 }
+
 .button-primary::after {
   content: "";
   position: absolute;
@@ -183,6 +431,7 @@ body {
   transform: translateY(0) rotate(0deg);
   transition: transform 200ms ease, box-shadow 220ms ease, background-color 200ms ease;
 }
+
 .button-secondary::after {
   content: "";
   position: absolute;
@@ -210,6 +459,7 @@ body {
 
 button {
   font-size: 1rem;
+  padding: 0.75rem;
 }
 
 button:hover {
@@ -224,14 +474,13 @@ button:hover {
 }
 
 .cl-internal-1k7jtru {
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, transparent, #97a2ff 7%),
-    color-mix(in srgb, transparent, #97a2ff 7%) 6px,
-    color-mix(in srgb, transparent, #97a2ff 11%) 6px,
-    color-mix(in srgb, transparent, #97a2ff 11%) 16px
-  ) !important;
+  background: repeating-linear-gradient(-45deg,
+      color-mix(in srgb, transparent, #97a2ff 7%),
+      color-mix(in srgb, transparent, #97a2ff 7%) 6px,
+      color-mix(in srgb, transparent, #97a2ff 11%) 6px,
+      color-mix(in srgb, transparent, #97a2ff 11%) 16px) !important;
 }
+
 /* .cl-formButtonPrimary:hover,
 .cl-formButtonPrimary:focus,
 .cl-formButtonPrimary:active {
@@ -402,14 +651,17 @@ button:hover {
 .book-cover__subtitle {
   margin-top: 0.1rem;
   font-size: 0.6rem;
-  color:var(--color-ink-soft);
+  color: var(--color-ink-soft);
   letter-spacing: 0.04em;
   text-align: left;
   max-width: 6rem;
 
-  white-space: nowrap;        /* 🚀 keep text on one line */
-  overflow: hidden;           /* 🚀 hide overflow */
-  text-overflow: ellipsis;    /* 🚀 show … */
+  white-space: nowrap;
+  /* 🚀 keep text on one line */
+  overflow: hidden;
+  /* 🚀 hide overflow */
+  text-overflow: ellipsis;
+  /* 🚀 show … */
 }
 
 
@@ -432,7 +684,7 @@ button:hover {
   align-items: center;
   justify-content: center;
   height: 100%;
-  border-radius:0.5rem;
+  border-radius: 0.5rem;
   border: 1px dashed var(--color-theme-neutral-border);
   background: var(--color-theme-neutral-card);
   color: var(--color-ink-muted);
@@ -455,13 +707,13 @@ button:hover {
   background: #f7f7f7;
   clip-path: polygon(0% 3%, 98% 0, 96% 100%, 4% 100%);
   border-bottom: 1px solid #efefef;
-/* border-radius: 0.2rem; */
+  /* border-radius: 0.2rem; */
 
 }
 
-.book-shadow-div{
+.book-shadow-div {
   box-shadow: 2px 6px 10px rgba(43, 43, 43, 0.09);
-/* border-radius: 0.2rem; */
+  /* border-radius: 0.2rem; */
 
 }
 
@@ -480,15 +732,15 @@ button:hover {
 
 .group:hover .book-shadow-div {
   transform: perspective(900px) rotateX(6deg) rotateY(-4deg) translateY(-6px);
-  box-shadow: 10px 28px 36px rgba(47,36,86,0.2);
+  box-shadow: 10px 28px 36px rgba(47, 36, 86, 0.2);
 }
 
 .group:hover {
   transform: perspective(900px) rotateX(6deg) rotateY(-4deg) translateY(-6px);
-  box-shadow: 0px 0px 0px rgba(47,36,86,0.2);
+  box-shadow: 0px 0px 0px rgba(47, 36, 86, 0.2);
 }
 
-div.recent-group{
+div.recent-group {
   background-color: transparent !important;
 }
 
@@ -581,10 +833,10 @@ div.recent-group{
 }
 
 .starter-grid {
-display: flex;
-flex-direction: row;
-gap: 1.4rem;
-flex-wrap: wrap;
+  display: flex;
+  flex-direction: row;
+  gap: 1.4rem;
+  flex-wrap: wrap;
   justify-items: center;
   padding: 0rem 1.4rem 4rem 0rem;
 }

@@ -181,12 +181,12 @@ export default function Landing() {
             </p>
             <div className="flex flex-wrap items-center gap-8 mt-6">
               <Link href="/sign-in" className="text-sm transition-colors">
-                <button type="button" className="button-secondary">
+                <button  className="button-secondary">
                   Sign - Save My Vibes
                 </button>
               </Link>
               <Link href="/dashboard">
-                <button type="button" className="button-primary">
+                <button className="button-primary">
                   Try Keeps Now ✨
                 </button>
               </Link>

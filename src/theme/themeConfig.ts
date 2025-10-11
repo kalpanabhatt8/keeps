@@ -1,0 +1,65 @@
+// src/theme/themeConfig.ts
+import {
+    LucidePalette,
+    LucideHeart,
+    LucideMonitor,
+    LucideSparkles,
+    LucideType,
+    LucideCandy,
+    LucidePen,
+    LucideFileText,
+    LucideBook,
+    LucideMusic,
+    LucideMusic4,
+    LucideDisc,
+    LucideMusic2,
+    LucideMic,
+    LucideMic2,
+    LucideMicVocal,
+    LucideMicOff,
+  } from "lucide-react";
+  
+  export type Theme = "neutral" | "kawaii" | "retro" | "anime";
+  
+  export const themeConfig = {
+    neutral: {
+      panel: "bg-[var(--color-surface-card)] text-[var(--color-icon)]",
+      button: "bg-[var(--color-iconbutton)] text-[var(--color-icon)] border-1 border-[var(--color-iconborder-border)]",
+      hover: "hover:bg-[var(--color-iconbutton-hover))]",
+      backgroundIcon: LucidePalette,
+      textIcon: LucideType,
+      stickyIcon: LucidePalette,
+      audioIcon: LucideMusic,
+      micIcon: LucideMic,
+    },
+    kawaii: {
+      panel: "bg-[var(--color-surface-card)] text-[var(--color-icon)]",
+      button: "bg-[var(--color-iconbutton)] text-[var(--color-icon)] border-1 border-[var(--color-iconborder-border)]",
+      hover: "hover:bg-[var(--color-iconbutton-hover))]",
+      backgroundIcon: LucideHeart,
+      textIcon: LucideCandy,
+      stickyIcon: LucideHeart,
+      audioIcon: LucideMusic4,
+      micIcon: LucideMic2,
+    },
+    retro: {
+      panel: "bg-[var(--color-surface-card)] text-[var(--color-icon)]",
+      button: "bg-[var(--color-iconbutton)] text-[var(--color-icon)] border-1 border-[var(--color-iconborder-border)]",
+      hover: "hover:bg-[var(--color-iconbutton-hover))]",
+      backgroundIcon: LucideMonitor,
+      textIcon: LucideMonitor,
+      stickyIcon: LucideFileText,
+      audioIcon: LucideDisc,
+      micIcon: LucideMicVocal,
+    },
+    anime: {
+      panel: "bg-[var(--color-surface-card)] text-[var(--color-icon)]",
+      button: "bg-[var(--color-iconbutton)] text-[var(--color-icon)] border-1 border-[var(--color-iconborder-border)]",
+      hover: "hover:bg-[var(--color-iconbutton-hover))]",
+      backgroundIcon: LucideSparkles,
+      textIcon: LucidePen,
+      stickyIcon: LucideBook,
+      audioIcon: LucideMusic2,
+      micIcon: LucideMicOff,
+    },
+  } as const;
