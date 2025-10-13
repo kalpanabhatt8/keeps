@@ -1,4 +1,12 @@
+// Pattern type: reusable for patterns and textures
 "use client";
+type Pattern = {
+  name: string;
+  style: string; // CSS background-image like url('...')
+  color?: string;
+  blend?: string;
+};
+// Font family options by theme (all themes use the full font list)
 // Font family options by theme (all themes use the full font list)
 const fontsByTheme: Record<Theme, string[]> = {
   neutral: [
@@ -195,7 +203,7 @@ const stickerIconByTheme: Record<
   anime: LucideGhost,
 };
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { themeConfig } from "@/theme/themeConfig";
 import { LucideSearch } from "lucide-react";
 
@@ -594,6 +602,7 @@ import {
   Trash2,
 } from "lucide-react";
 import clsx from "clsx";
+import { HexAlphaColorPicker, HexColorPicker } from "react-colorful";
 const Popup = dynamic(() => import("reactjs-popup"), { ssr: false });
 // import { LucideType } from "";
 // (The duplicate MusicSearchPopup definition is removed below.)
@@ -602,9 +611,9 @@ type Theme = "neutral" | "kawaii" | "retro" | "anime";
 
 type CanvasBackgroundState = {
   color?: string;
-  pattern?: string;
   image?: string;
-  texture?: string;
+  pattern?: Pattern;
+  texture?: Pattern;
 };
 
 export type CanvasSnapshot = {
@@ -637,17 +646,39 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const coerceBackgroundState = (value: unknown): CanvasBackgroundState => {
   if (!isRecord(value)) return {};
+  const coercePattern = (input: unknown): Pattern | undefined => {
+    if (typeof input === "string") {
+      // Back-compat from earlier snapshots (string URL)
+      return { name: "custom", style: input };
+    }
+    if (isRecord(input) && typeof input.style === "string") {
+      return {
+        name:
+          typeof input.name === "string" ? (input.name as string) : "custom",
+        style: input.style as string,
+        color:
+          typeof input.color === "string" ? (input.color as string) : undefined,
+        blend:
+          typeof input.blend === "string" ? (input.blend as string) : undefined,
+      };
+    }
+    return undefined;
+  };
+
   const result: CanvasBackgroundState = {};
   if (typeof value.color === "string") result.color = value.color;
-  if (typeof value.pattern === "string") result.pattern = value.pattern;
   if (typeof value.image === "string") result.image = value.image;
-  if (typeof value.texture === "string") result.texture = value.texture;
+
+  const pat = coercePattern((value as any).pattern);
+  if (pat) result.pattern = pat;
+
+  const tex = coercePattern((value as any).texture);
+  if (tex) result.texture = tex;
+
   return result;
 };
 
-const coerceGlobalAudio = (
-  value: unknown
-): CanvasSnapshot["globalAudio"] => {
+const coerceGlobalAudio = (value: unknown): CanvasSnapshot["globalAudio"] => {
   if (!isRecord(value)) return null;
   const { videoId, title, thumbnail, channelTitle, artist } = value;
   if (typeof videoId !== "string" || typeof title !== "string") return null;
@@ -655,8 +686,7 @@ const coerceGlobalAudio = (
     videoId,
     title,
     thumbnail: typeof thumbnail === "string" ? thumbnail : undefined,
-    channelTitle:
-      typeof channelTitle === "string" ? channelTitle : undefined,
+    channelTitle: typeof channelTitle === "string" ? channelTitle : undefined,
     artist: typeof artist === "string" ? artist : undefined,
   };
 };
@@ -722,9 +752,7 @@ const normalizeSnapshot = (value: unknown): CanvasSnapshot | null => {
   };
 };
 
-const parseInitialBackground = (
-  value?: string
-): CanvasBackgroundState => {
+const parseInitialBackground = (value?: string): CanvasBackgroundState => {
   if (!value) return {};
   const trimmed = value.trim();
   if (!trimmed) return {};
@@ -863,23 +891,10 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ theme, setTheme }) => {
 };
 
 type BackgroundPopupProps = {
-  setBackground: React.Dispatch<
-    React.SetStateAction<{
-      color?: string;
-      pattern?: string;
-      image?: string;
-      texture?: string;
-    }>
-  >;
-  background: {
-    color?: string;
-    pattern?: string;
-    image?: string;
-    texture?: string;
-  };
+  setBackground: React.Dispatch<React.SetStateAction<CanvasBackgroundState>>;
+  background: CanvasBackgroundState;
   theme: Theme;
 };
-
 // Accepts onAddImage prop to add image elements instead of setting background image
 const BackgroundPopup: React.FC<
   BackgroundPopupProps & { onAddImage?: (src: string) => void }
@@ -907,42 +922,221 @@ const BackgroundPopup: React.FC<
     themeConfig[theme].hover
   );
 
-  const presetColors = [
-    "#ffffff",
-    "#f87171",
-    "#60a5fa",
-    "#34d399",
-    "#fbbf24",
-    "#a78bfa",
-  ];
-  // Patterns using external URLs from transparenttextures.com
-  const patterns = [
-    {
-      name: "Stripes",
-      style:
-        "url('https://www.transparenttextures.com/patterns/diagmonds-light.png')",
-    },
-    {
-      name: "Dots",
-      style: "url('https://www.transparenttextures.com/patterns/dots.png')",
-    },
+  const themePresetColors: Record<Theme, string[]> = {
+    neutral: [
+      "#ffffff", // pure white
+      "#f9fafb", // light gray (backgrounds)
+      "#f3f4f6", // neutral soft gray
+      "#e5e7eb", // subtle border gray
+      "#d1d5db", // medium gray
+      "#9ca3af", // neutral gray
+      "#6b7280", // slate gray
+      "#4b5563", // darker slate
+      "#374151", // dark gray
+      "#1f2937", // near-black gray
+      "#111827", // almost black
+    ],
+    kawaii: ["#f87171", "#60a5fa", "#34d399", "#fbbf24", "#a78bfa"],
+    retro: ["#000000", "#1f2937", "#4b5563", "#6b7280", "#9ca3af"],
+    anime: ["#f472b6", "#facc15", "#4ade80", "#38bdf8", "#c084fc"],
+  };
+
+  const universalPatterns: Pattern[] = [
     {
       name: "Paper",
       style:
         "url('https://www.transparenttextures.com/patterns/paper-fibers.png')",
-    },
-  ];
-  const textures = [
-    {
-      name: "Paper",
-      style: "url('https://www.transparenttextures.com/patterns/paper.png')",
+      color: "#f9fafb", // neutral gray
+      blend: "multiply",
     },
     {
-      name: "Noise",
+      name: "Dots",
       style:
-        "url('https://www.transparenttextures.com/patterns/asfalt-dark.png')",
+        "url('https://www.transparenttextures.com/patterns/worn-dots.png')",
+      color: "#e5e7eb", // light gray
+      blend: "overlay",
+    },
+    {
+      name: "Tiny Grid",
+      style:
+        "url('https://www.transparenttextures.com/patterns/tiny-grid.png')",
+      color: "#d1d5db", // subtle mid-gray
+      blend: "multiply",
+    },
+    {
+      name: "3px Tile",
+      style:
+        "url('https://www.transparenttextures.com/patterns/project-paper.png')",
+      color: "#ffffff",
+      blend: "normal",
+    },
+    {
+      name: "Grid Me",
+      style: "url('https://www.transparenttextures.com/patterns/grid-me.png')",
+      color: "#f3f4f6",
+      blend: "multiply",
+    },
+    {
+      name: "Neutral",
+      style:
+        "url('https://www.transparenttextures.com/patterns/ps-neutral.png')",
+      color: "#fafafa",
+      blend: "overlay",
+    },
+    {
+      name: "Neutral Grid",
+      style: "url('https://www.transparenttextures.com/patterns/grid.png')",
+      color: "#fefefe",
+      blend: "normal",
     },
   ];
+
+  const themeTexturePresets: Record<Theme, Pattern[]> = {
+    neutral: [
+      ...universalPatterns,
+      {
+        name: "Fabric of Squares",
+        style:
+          "url('https://www.transparenttextures.com/patterns/fabric-of-squares.png')",
+        color: "#f4f4f5",
+        blend: "multiply",
+      },
+      {
+        name: "White Carbon",
+        style:
+          "url('https://www.transparenttextures.com/patterns/white-carbon.png')",
+        color: "#ffffff",
+        blend: "soft-light",
+      },
+    ],
+    kawaii: [
+      ...universalPatterns,
+      {
+        name: "Confetti",
+        style:
+          "url('https://www.transparenttextures.com/patterns/confetti.png')",
+        color: "#ffe4ee",
+        blend: "screen",
+      },
+      {
+        name: "Hearts",
+        style: "url('https://www.transparenttextures.com/patterns/hearts.png')",
+        color: "#ffd6e7",
+        blend: "overlay",
+      },
+      {
+        name: "Polka Dots",
+        style:
+          "url('https://www.transparenttextures.com/patterns/polka-dots.png')",
+        color: "#fff0f6",
+        blend: "soft-light",
+      },
+    ],
+    retro: [
+      ...universalPatterns,
+      {
+        name: "Carbon Fibre",
+        style:
+          "url('https://www.transparenttextures.com/patterns/carbon-fibre.png')",
+        color: "#e3c29b",
+        blend: "multiply",
+      },
+      {
+        name: "Asfalt Dark",
+        style:
+          "url('https://www.transparenttextures.com/patterns/asfalt-dark.png')",
+        color: "#d6b98f",
+        blend: "soft-light",
+      },
+      {
+        name: "Cubes",
+        style: "url('https://www.transparenttextures.com/patterns/cubes.png')",
+        color: "#fff4e6",
+        blend: "overlay",
+      },
+    ],
+    anime: [
+      ...universalPatterns,
+      {
+        name: "Bubbles",
+        style:
+          "url('https://www.transparenttextures.com/patterns/bubbles.png')",
+        color: "#0d0d0d",
+        blend: "screen",
+      },
+      {
+        name: "Skulls",
+        style: "url('https://www.transparenttextures.com/patterns/skulls.png')",
+        color: "#1a1a1a",
+        blend: "overlay",
+      },
+      {
+        name: "Clouds",
+        style: "url('https://www.transparenttextures.com/patterns/clouds.png')",
+        color: "#111827",
+        blend: "lighten",
+      },
+    ],
+  };
+
+  // const themePatternPresets: Record<Theme, Texture[]> = {
+  //   neutral: [
+  //     {
+  //       name: "Paper Grid",
+  //       style: "url('https://www.transparenttextures.com/patterns/grid-me.png')",
+  //     },
+  //     {
+  //       name: "Tiny Grid",
+  //       style: "url(' https://www.transparenttextures.com/patterns/tiny-grid.png')",
+  //     },
+  //     {
+  //       name: "Tiny Grid",
+  //       style: "url('https://www.transparenttextures.com/patterns/3px-tile.png')",
+  //     },
+  //     {
+  //       name: "Tiny Grid",
+  //       style: "url(' https://www.transparenttextures.com/patterns/tiny-grid.png')",
+  //     },
+  //     {
+  //       name: "Tiny Grid",
+  //       style: "url(' https://www.transparenttextures.com/patterns/tiny-grid.png')",
+  //     },
+
+  //   ],
+  //   kawaii: [
+  //     {
+  //       name: "Paint",
+  //       style: "url('https://www.transparenttextures.com/patterns/paint.png')",
+  //     },
+  //     {
+  //       name: "Brush",
+  //       style: "url('https://www.transparenttextures.com/patterns/brush.png')",
+  //     },
+  //   ],
+  //   retro: [
+  //     {
+  //       name: "Dark Grid",
+  //       style:
+  //         "url('https://www.transparenttextures.com/patterns/dark-mosaic.png')",
+  //     },
+  //     {
+  //       name: "Asfalt",
+  //       style:
+  //         "url('https://www.transparenttextures.com/patterns/asfalt-dark.png')",
+  //     },
+  //   ],
+  //   anime: [
+  //     {
+  //       name: "Polka Dots",
+  //       style:
+  //         "url('https://www.transparenttextures.com/patterns/polka-dots.png')",
+  //     },
+  //     {
+  //       name: "Skulls",
+  //       style: "url('https://www.transparenttextures.com/patterns/skulls.png')",
+  //     },
+  //   ],
+  // };
 
   const onColorChange = (color: string) => {
     setBackground((prev) => ({ ...prev, color }));
@@ -960,11 +1154,11 @@ const BackgroundPopup: React.FC<
     }
   };
 
-  const onPatternChange = (pattern?: string) => {
+  const onPatternChange = (pattern?: Pattern) => {
     setBackground((prev) => ({ ...prev, pattern }));
   };
 
-  const onTextureChange = (texture?: string) => {
+  const onTextureChange = (texture?: Pattern) => {
     setBackground((prev) => ({ ...prev, texture }));
   };
 
@@ -974,13 +1168,191 @@ const BackgroundPopup: React.FC<
   };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
+  // const onColorChangeBg = (newColor: string) => {
+  //   setBackground((prev) => ({ ...prev, color: newColor }));
+  // };
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
-
+  const [showColorPicker, setShowColorPicker] = React.useState(false);
   return (
+    // <Popup
+    //   trigger={
+    //     <button aria-label="Select background" className={triggerButtonClass}>
+    //       <BackgroundIcon size={18} />
+    //     </button>
+    //   }
+    //   position="top center"
+    //   closeOnDocumentClick
+    //   arrow={false}
+    //   contentStyle={{
+    //     padding: "1rem",
+    //     borderRadius: "0.5rem",
+    //     boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+    //     maxWidth: "280px",
+    //   }}
+    //   open={open}
+    //   onOpen={() => setOpen(true)}
+    //   onClose={() => setOpen(false)}
+    // >
+    //   <div
+    //     className={clsx(
+    //       "flex flex-col gap-4 p-2 rounded-lg",
+    //       themeConfig[theme].panel
+    //     )}
+    //   >
+    //     {/* Solid Color */}
+    //     <div>
+    //       <p className="text-sm font-semibold mb-1">Solid Color</p>
+    //       <div className="flex gap-2 mb-2">
+    //         {themePresetColors[theme]?.map((color) => (
+    //           <div
+    //             key={color}
+    //             onClick={() => onColorChange(color)}
+    //             className={clsx(
+    //               "w-7 h-7 rounded-full cursor-pointer transition-all",
+    //               background.color === color
+    //                 ? "ring-2 ring-[var(--color-primary)]"
+    //                 : "hover:ring-2 hover:ring-[var(--color-border-emphasis)]"
+    //             )}
+    //             style={{ backgroundColor: color }}
+    //             title={color}
+    //           />
+    //         ))}
+    //       </div>
+    //       <input
+    //         type="color"
+    //         value={background.color || "#ffffff"}
+    //         onChange={(e) => onColorChange(e.target.value)}
+    //         className="w-20 h-8 p-0 border-none cursor-pointer"
+    //       />
+    //     </div>
+
+    //     {/* Pattern */}
+    //     <div>
+    //       <p className="text-xs font-medium mb-2 text-[var(--color-ink-soft)] uppercase tracking-wide">
+    //         Pattern
+    //       </p>
+    //       <div className="flex gap-2">
+    //         <button
+    //           onClick={() => onPatternChange(undefined)}
+    //           className={clsx(
+    //             tileButtonClass,
+    //             "flex items-center justify-center text-xl font-bold",
+    //             background.pattern === undefined
+    //               ? "border-[var(--color-border-emphasis)]"
+    //               : "hover:border-[var(--color-border-emphasis)]",
+    //             "text-[var(--color-ink-strong)]"
+    //           )}
+    //           title="None"
+    //         >
+    //           ❌
+    //         </button>
+    //         {themePatternPresets[theme].map(({ name, style }) => (
+    //           <button
+    //             key={name}
+    //             onClick={() => onPatternChange(style)}
+    //             className={clsx(
+    //               tileButtonClass,
+    //               background.pattern === style
+    //                 ? "border-[var(--color-border-emphasis)]"
+    //                 : "hover:border-[var(--color-border-emphasis)]"
+    //             )}
+    //             title={name}
+    //             style={{
+    //               backgroundImage: style,
+    //               backgroundSize: "20px 20px",
+    //               backgroundRepeat: "repeat",
+    //               backgroundPosition: "0 0",
+    //             }}
+    //           />
+    //         ))}
+    //       </div>
+    //     </div>
+
+    //     {/* Background Image */}
+    //     <div>
+    //       <p className="text-sm font-semibold mb-1">Background Image</p>
+    //       <div className="flex items-center gap-2">
+    //         <button
+    //           type="button"
+    //           onClick={triggerFileInput}
+    //           className={primaryActionClass}
+    //         >
+    //           Upload Image
+    //         </button>
+    //         <button
+    //           type="button"
+    //           onClick={() =>
+    //             setBackground((prev) => ({ ...prev, image: undefined }))
+    //           }
+    //           className={neutralActionClass}
+    //           title="Remove Image"
+    //         >
+    //           ❌
+    //         </button>
+    //       </div>
+    //       <input
+    //         type="file"
+    //         accept="image/*"
+    //         onChange={onImageChange}
+    //         ref={fileInputRef}
+    //         className="hidden"
+    //       />
+    //     </div>
+
+    //     {/* Texture */}
+    //     <div>
+    //       <p className="text-sm font-semibold mb-1">Texture</p>
+    //       <div className="flex gap-2">
+    //         <button
+    //           onClick={() => onTextureChange(undefined)}
+    //           className={clsx(
+    //             neutralActionClass,
+    //             "text-xs font-bold",
+    //             background.texture === undefined
+    //               ? "border-[var(--color-border-emphasis)]"
+    //               : "hover:border-[var(--color-border-emphasis)]",
+    //             "text-[var(--color-ink-strong)]"
+    //           )}
+    //           title="None"
+    //         >
+    //           ❌
+    //         </button>
+    //         {themeTexturePresets[theme].map(({ name, style }) => (
+    //           <button
+    //             key={name}
+    //             onClick={() => onTextureChange(style)}
+    //             className={clsx(
+    //               neutralActionClass,
+    //               "text-xs",
+    //               background.texture === style
+    //                 ? "border-[var(--color-border-emphasis)]"
+    //                 : "hover:border-[var(--color-border-emphasis)]"
+    //             )}
+    //             title={name}
+    //             style={{
+    //               backgroundImage: style,
+    //               backgroundSize: "auto",
+    //               backgroundRepeat: "repeat",
+    //             }}
+    //           >
+    //             {name}
+    //           </button>
+    //         ))}
+    //       </div>
+    //     </div>
+
+    //     <button
+    //       onClick={resetBackground}
+    //       className={clsx("mt-2", primaryActionClass)}
+    //     >
+    //       Reset Background
+    //     </button>
+    //   </div>
+    // </Popup>
     <Popup
+      className="bg-popup"
       trigger={
         <button aria-label="Select background" className={triggerButtonClass}>
           <BackgroundIcon size={18} />
@@ -990,108 +1362,30 @@ const BackgroundPopup: React.FC<
       closeOnDocumentClick
       arrow={false}
       contentStyle={{
-        padding: "1rem",
-        borderRadius: "0.5rem",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        maxWidth: "280px",
+        padding: "1.2rem 1.25rem",
+        borderRadius: "1rem",
+        background: "rgba(255,255,255,0.90)",
+        backdropFilter: "blur(18px)",
+        boxShadow: "0 8px 28px rgba(0,0,0,0.12)",
       }}
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
     >
-      <div
-        className={clsx(
-          "flex flex-col gap-4 p-2 rounded-lg",
-          themeConfig[theme].panel
-        )}
-      >
-        {/* Solid Color */}
-        <div>
-          <p className="text-sm font-semibold mb-1">Solid Color</p>
-          <div className="flex gap-2 mb-2">
-            {presetColors.map((color) => (
-              <div
-                key={color}
-                onClick={() => onColorChange(color)}
-                className={clsx(
-                  "w-6 h-6 rounded-full cursor-pointer border-2 border-transparent",
-                  background.color === color ? "border-black" : ""
-                )}
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
-          </div>
-          <input
-            type="color"
-            value={background.color || "#ffffff"}
-            onChange={(e) => onColorChange(e.target.value)}
-            className="w-20 h-8 p-0 border-none cursor-pointer"
-          />
-        </div>
-
-        {/* Pattern */}
-        <div>
-          <p className="text-sm font-semibold mb-1">Pattern</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onPatternChange(undefined)}
-              className={clsx(
-                tileButtonClass,
-                "flex items-center justify-center text-xl font-bold",
-                background.pattern === undefined
-                  ? "border-[var(--color-border-emphasis)]"
-                  : "hover:border-[var(--color-border-emphasis)]",
-                "text-[var(--color-ink-strong)]"
-              )}
-              title="None"
-            >
-              ❌
-            </button>
-            {patterns.map(({ name, style }) => (
-              <button
-                key={name}
-                onClick={() => onPatternChange(style)}
-                className={clsx(
-                  tileButtonClass,
-                  background.pattern === style
-                    ? "border-[var(--color-border-emphasis)]"
-                    : "hover:border-[var(--color-border-emphasis)]"
-                )}
-                title={name}
-                style={{
-                  backgroundImage: style,
-                  backgroundSize: "20px 20px",
-                  backgroundRepeat: "repeat",
-                  backgroundPosition: "0 0",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Background Image */}
-        <div>
-          <p className="text-sm font-semibold mb-1">Background Image</p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={triggerFileInput}
-              className={primaryActionClass}
-            >
-              Upload Image
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setBackground((prev) => ({ ...prev, image: undefined }))
-              }
-              className={neutralActionClass}
-              title="Remove Image"
-            >
-              ❌
-            </button>
-          </div>
+      <div className={clsx("flex flex-col gap-3", themeConfig[theme].panel)}>
+        {/* First row: Upload, color swatches, color picker, reset */}
+        <div className="flex items-center gap-2 mb-1">
+          {/* Upload Image button */}
+          <button
+            type="button"
+            onClick={triggerFileInput}
+            className={clsx(
+              "ml-auto p-2 flex items-center justify-center rounded-full border border-[var(--color-border-subtle)] text-[var(--color-ink-soft)] bg-transparent hover:bg-[var(--color-surface-base)] transition"
+            )}
+            title="Upload Background Image"
+          >
+            <LucideImage size={18} />
+          </button>
           <input
             type="file"
             accept="image/*"
@@ -1099,58 +1393,91 @@ const BackgroundPopup: React.FC<
             ref={fileInputRef}
             className="hidden"
           />
-        </div>
-
-        {/* Texture */}
-        <div>
-          <p className="text-sm font-semibold mb-1">Texture</p>
-          <div className="flex gap-2">
+          {/* Color swatches */}
+          {themePresetColors[theme]?.map((color) => (
             <button
-              onClick={() => onTextureChange(undefined)}
+              key={color}
+              onClick={() => onColorChange(color)}
               className={clsx(
-                neutralActionClass,
-                "text-xs font-bold",
-                background.texture === undefined
-                  ? "border-[var(--color-border-emphasis)]"
-                  : "hover:border-[var(--color-border-emphasis)]",
-                "text-[var(--color-ink-strong)]"
+                "!w-10 !h-10 rounded-full border-2 cursor-pointer transition-all mx-0.5",
+                background.color === color
+                  ? "ring-2 ring-[var(--color-primary)] border-[var(--color-primary)] shadow"
+                  : "border-[var(--color-border-subtle)] hover:ring-2 hover:ring-[var(--color-border-emphasis)]"
               )}
-              title="None"
-            >
-              ❌
-            </button>
-            {textures.map(({ name, style }) => (
-              <button
-                key={name}
-                onClick={() => onTextureChange(style)}
-                className={clsx(
-                  neutralActionClass,
-                  "text-xs",
-                  background.texture === style
-                    ? "border-[var(--color-border-emphasis)]"
-                    : "hover:border-[var(--color-border-emphasis)]"
-                )}
-                title={name}
-                style={{
-                  backgroundImage: style,
-                  backgroundSize: "auto",
-                  backgroundRepeat: "repeat",
-                }}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
+              style={{ backgroundColor: color }}
+              title={color}
+              type="button"
+            />
+          ))}
+          {/* Color picker trigger */}
+          <button
+            type="button"
+            onClick={() => setShowColorPicker((v) => !v)}
+            className={clsx(
+              "w-7 h-7 rounded-full flex items-center justify-center transition-all mx-0.5 border-2 border-[var(--color-border-subtle)] bg-gradient-to-br from-pink-400 via-yellow-400 to-blue-400",
+              showColorPicker
+                ? "ring-2 ring-[var(--color-primary)] shadow"
+                : "hover:ring-2 hover:ring-[var(--color-border-emphasis)]"
+            )}
+            title="Pick a custom color"
+          >
+            <LucideRainbow size={16} />
+          </button>
+          {/* Reset button at end */}
+          <button
+            type="button"
+            onClick={resetBackground}
+            className={clsx(
+              "ml-auto p-2 flex items-center justify-center rounded-full border border-[var(--color-border-subtle)] text-[var(--color-ink-soft)] bg-transparent hover:bg-[var(--color-surface-base)] transition"
+            )}
+            title="Reset background"
+          >
+            <RotateCw size={16} />
+          </button>
         </div>
-
-        <button
-          onClick={resetBackground}
-          className={clsx("mt-2", primaryActionClass)}
-        >
-          Reset Background
-        </button>
+        {/* Color picker popover (appear below row if triggered) */}
+        {showColorPicker && (
+          <div className="flex flex-row items-center gap-2 mb-1">
+            <HexAlphaColorPicker
+              color={background.color || "#ffffff"}
+              onChange={onColorChange}
+              style={{ width: 160, height: 80 }}
+            />
+            <input
+              type="text"
+              value={background.color || "#ffffff"}
+              onChange={(e) => onColorChange(e.target.value)}
+              className="w-20 h-8 rounded-md border border-[var(--color-border-subtle)] shadow-sm text-center ml-2"
+              spellCheck={false}
+              autoComplete="off"
+              maxLength={9}
+              title="Hex color"
+            />
+          </div>
+        )}
+        {/* Second row: texture thumbnails */}
+        <div className="flex items-center gap-2 mt-1">
+          {themeTexturePresets[theme].map((tex) => (
+            <button
+              key={tex.name}
+              onClick={() =>
+                setBackground((prev) => ({ ...prev, texture: tex }))
+              }
+              className="w-10 h-10 rounded-md border-2"
+              style={{
+                backgroundImage: tex.style,
+                backgroundColor: tex.color || "transparent",
+                backgroundBlendMode: tex.blend || "normal",
+                backgroundSize: "32px 32px",
+              }}
+              title={tex.name}
+              type="button"
+            />
+          ))}
+        </div>
       </div>
     </Popup>
+    // State for color picker popup in BackgroundPopup
   );
 };
 
@@ -1216,9 +1543,11 @@ const AudioPopup: React.FC<AudioPopupProps> = ({ theme, onAddAudio }) => {
       closeOnDocumentClick
       arrow={false}
       contentStyle={{
-        padding: "1rem",
-        borderRadius: "0.5rem",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+        padding: "1.25rem",
+        borderRadius: "0.75rem",
+        background: "rgba(255,255,255,0.82)",
+        backdropFilter: "blur(18px)", // 👈 glassy Apple look
+        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
         maxWidth: "320px",
       }}
       open={open}
@@ -1266,8 +1595,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
     artist?: string;
   } | null>(null);
   const [theme, setTheme] = React.useState<Theme>("neutral");
-  const [background, setBackground] =
-    React.useState<CanvasBackgroundState>({});
+  const [background, setBackground] = React.useState<CanvasBackgroundState>({});
   const [isHydrated, setIsHydrated] = React.useState(false);
   const snapshotComparableRef = React.useRef<string | null>(null);
   const hydratedFromTemplateRef = React.useRef(false);
@@ -1275,8 +1603,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
   // Text elements state
   const [textElements, setTextElements] = React.useState<TextElement[]>([]);
   // Sticky notes state
-  const [stickyNotes, setStickyNotes] =
-    React.useState<StickyNoteElement[]>([]);
+  const [stickyNotes, setStickyNotes] = React.useState<StickyNoteElement[]>([]);
   const [selectedStickyId, setSelectedStickyId] = React.useState<string | null>(
     null
   );
@@ -1715,8 +2042,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
     if (selectedStickerId === id) setSelectedStickerId(null);
   };
   // --- Audio elements state and handlers ---
-  const [audioElements, setAudioElements] =
-    React.useState<AudioElement[]>([]);
+  const [audioElements, setAudioElements] = React.useState<AudioElement[]>([]);
   const [selectedAudioId, setSelectedAudioId] = React.useState<string | null>(
     null
   );
@@ -2193,24 +2519,20 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
         />
       )}
       {background.image && (
-        <div
-          className="absolute z-0 select-none pointer-events-none"
-          style={{
-            backgroundImage: `url(${background.image})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            backgroundAttachment: "fixed",
-            backgroundClip: "border-box",
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0,
-            position: "absolute",
-          }}
-        />
-      )}
-      {background.pattern && (
+  <div
+    className="absolute inset-0 z-0 select-none pointer-events-none"
+    style={{
+      backgroundImage: `url(${background.image})`,
+      backgroundSize: "cover",     // ensures full coverage
+      backgroundPosition: "center",// centers the image
+      backgroundRepeat: "no-repeat",
+      objectFit: "cover",          // extra safety
+      width: "100vw !important",
+      height: "100vh",
+    }}
+  />
+)}
+      {/* {background.pattern && (
         <div
           className="absolute inset-0 z-0 opacity-30"
           style={{
@@ -2219,19 +2541,22 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
             backgroundSize: "20px 20px",
           }}
         />
-      )}
-      {background.texture && (
+      )} */}
+      {/* Texture overlay (full background) */}
+      {background.texture ? (
         <div
           className="absolute inset-0 z-0 pointer-events-none"
           style={{
-            backgroundImage: background.texture,
+            backgroundImage: background.texture.style,
+            backgroundColor: background.texture.color ?? "transparent",
+            backgroundBlendMode: background.texture.blend ?? "normal",
             backgroundRepeat: "repeat",
             backgroundSize: "auto",
-            opacity: 0.9,
+            opacity: background.image ? 0.05 : 0.2,
             mixBlendMode: "multiply",
           }}
         />
-      )}
+      ) : null}
       <div className="absolute top-4 right-4 flex gap-2">
         <ThemeSelector theme={theme} setTheme={setTheme} />
         <MusicSearchPopup
@@ -3104,16 +3429,13 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
         })}
       </div>
       <div
-        className={clsx(
-          "absolute bottom-8 flex gap-3 items-center transition",
-        )}
-    
+        className={clsx("absolute bottom-8 flex gap-3 items-center transition")}
       >
         <BackgroundPopup
           theme={theme}
           setBackground={setBackground}
           background={background}
-          onAddImage={addImageElement}
+          // onAddImage={addImageElement}
         />
         {/* Always render Add Text button */}
         <button
@@ -3121,7 +3443,6 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({
           onClick={addTextElement}
           title="Add text"
           type="button"
-       
         >
           <TextIcon size={18} />
         </button>
@@ -3384,7 +3705,8 @@ export default CanvasBoard;
 const textures = [
   {
     name: "Paper",
-    style: "url('https://www.transparenttextures.com/patterns/paper.png')",
+    style:
+      "url('https://www.transparenttextures.com/patterns/back-pattern.png')",
   },
   {
     name: "Noise",

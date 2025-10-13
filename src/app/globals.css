@@ -861,3 +861,38 @@ div.recent-group {
     width: 110px;
   }
 }
+
+/* .bg-popup-content {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important; 
+  width: fit-content !important;
+  max-width: min(92vw, 960px) !important; 
+  z-index: 9999 !important;
+} */
+
+.bg-popup-content {
+  position: fixed !important;
+  left: 50% !important;
+  bottom: 12% !important; /* adjust this to match your toolbar height */
+  transform: translateX(-50%) !important; /* only center on X */
+  width: fit-content !important;
+  z-index: 9999 !important;
+}
+
+/* Target the draggable dot */
+.color-picker .react-colorful__pointer {
+  width: 18px !important;   /* smaller size */
+  height: 18px !important;
+  border: 2px solid #fff;   /* clean border */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.react-colorful__saturation,
+.react-colorful__hue,
+.react-colorful__alpha {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
